@@ -27,7 +27,7 @@ Here, you will find some scripts and config files to create a small cluster with
 
 <h2 align="center">Docker Tips</h2>
 
-- Build an Image : `docker build <folder>/. -t <image_name> -f <dockerfile>
+- Build an Image : `docker build <folder>/. -t <image_name> -f <dockerfile>`
 - to Run a container : `docker run -Pd -v <folder_host>:<folder_container> --network <network_name> --name <container_name> -it -h <container_name> <image_name>`
 - Enter in the container : `docker exec -u <user> -it <container_name> bash`
 - To kill a container : `docker kill <container_name>`
