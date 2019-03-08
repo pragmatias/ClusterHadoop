@@ -92,7 +92,7 @@ function destroyCluster {
     then
         echo `date '+%Y-%m-%d %H:%M:%S'`" - Network ${Vg_nameNetwork} exist [id=${Vl_idNetwork}]"
         
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker rm ${Vl_idNetwork}"
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker network rm ${Vl_idNetwork}"
         docker network rm ${Vl_idNetwork}
         sleep 2
     fi
