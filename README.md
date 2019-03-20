@@ -41,4 +41,4 @@ Here, you will find some scripts and config files to create a small cluster with
 - Install docker package : `sudo zypper in docker`
 - Start the systemd service : `sudo systemctl start docker`
 - Activate the systemd service (boot) : `sudo systemctl enable docker`
-
+- Add group "docker" for the user : `sudo usermod -G docker -a <username>`
