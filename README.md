@@ -36,3 +36,9 @@ Here, you will find some scripts and config files to create a small cluster with
 - To list the network : `docker network list`
 
 
+<h2 align="center">Install Docker on OpenSuse</h2>
+
+- Install docker package : `sudo zypper in docker`
+- Start the systemd service : `sudo systemctl start docker`
+- Activate the systemd service (boot) : `sudo systemctl enable docker`
+
