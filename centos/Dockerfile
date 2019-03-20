@@ -8,7 +8,7 @@ ENV https_proxy http://usr:pwd@192.168.77.12:8080
 ENV hadoop_pkg hadoop-3.2.0
 
 #Configuration des variables d'environnement
-ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-1.el7_6.x86_64/jre
+ENV JAVA_HOME /usr/lib/jvm/jre
 
 #Exposition de port
 EXPOSE 22
@@ -106,13 +106,13 @@ RUN echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.profile
 
-RUN echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-1.el7_6.x86_64/jre" >> /home/hadoop/.profile
-RUN echo "export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-1.el7_6.x86_64/jre" >> /home/hadoop/.bashrc
+RUN echo "export JAVA_HOME=/usr/lib/jvm/jre" >> /home/hadoop/.profile
+RUN echo "export JAVA_HOME=/usr/lib/jvm/jre" >> /home/hadoop/.bashrc
 
 
-RUN echo JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-1.el7_6.x86_64/jre >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo JAVA_HOME=/usr/lib/jvm/jre >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 RUN echo HDFS_NAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
-RUN echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh                        
+RUN echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 RUN echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 
 
