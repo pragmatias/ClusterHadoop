@@ -8,6 +8,7 @@
 #Global parameter Cluster config
 Vg_configFileCluster="configCluster.cfg"
 Vg_configFileSlaves="configSlaves.cfg"
+Vg_dirRoot=${PWD}
 
 # Global parameter docker image
 Vg_dirDockerImage="centos"
@@ -17,9 +18,16 @@ Vg_nameDockerFile="Dockerfile"
 
 # Global parameter Cluster
 Vg_nameMasterNode="nodemaster"
-Vg_nameNetwork="tarace"
+Vg_nameNetwork="ClusterNet"
+Vg_dirData="${Vg_dirRoot}/data"
 
 function buildCluster {
+    mkdir -p ${Vg_dirRoot}/${Vg_dirDockerImage}/package
+    if [ ! -e "${Vg_dirRoot}/${Vg_dirDockerImage}/package/hadoop-3.2.0.tar.gz" ]
+    then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz in ${Vg_dirDockerImage}/package"
+        wget http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz
+    fi
 
     echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build ${Vg_dirDockerImage}/. -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
     docker build ${Vg_dirDockerImage}/. -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}
@@ -39,9 +47,9 @@ function buildCluster {
 function deployCluster {
 
     destroyCluster
-    
+
     createCluster
-        
+
     return 0
 }
 
@@ -132,8 +140,13 @@ function createCluster {
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
         
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker run -Pd -v ${PWD}/${Vg_dirDockerImage}/config:/config --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
-        docker run -Pd -v ${PWD}/${Vg_dirDockerImage}/config:/config --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}
+        #create data folder
+        Vl_dirData="${Vg_dirData}/${tmpNode}"
+        mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
+
+        #create container
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker run -Pd -v ${Vg_dirRoot}/${Vg_dirDockerImage}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        docker run -Pd -v ${Vg_dirRoot}/${Vg_dirDockerImage}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}
         sleep 5
     done
     
@@ -256,27 +269,50 @@ function configCluster {
 
 function startCluster {
     #docker exec -u hadoop -d nodemaster hdfs namenode -format
-    #docker exec -u hadoop -d nodemaster start-dfs.sh
-    #sleep 5
+    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-dfs.sh
+    sleep 5
+    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-yarn.sh
+    sleep 5
     return 0
 }
 
 
 function stopCluster {
-
+    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-yarn.sh
+    sleep 5
+    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-dfs.sh
+    sleep 5
     return 0
 }
 
 
-function show_info {
+function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
   echo "Hadoop info @ nodemaster: http://$masterIp:8088/cluster"
   echo "DFS Health @ nodemaster : http://$masterIp:9870/dfshealth.html"
 }
 
+function usage {
+    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop]"
+    echo "list of options :"
+    echo "     - build : build the docker image"
+    echo "     - deploy : deploy the docker container"
+    echo "     - config : configure the container (ssh & more)"
+    echo "     - info : give information about webbapps (cluster webUI)"
+    echo "     - start_hadoop : start dfs & yarn services (hadoop)"
+    echo "     - stop_hadoop : stop dfs & yarn services (hadoop)"
+}
 
 Vg_Param=$1
 CR=0
+
+Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|" | grep "|${Vg_Param}|" | wc -l)
+
+if [ ${Vg_TestArgs} -eq 0 ]
+then 
+    usage
+    exit 1
+fi
 
 echo 
 
@@ -292,6 +328,7 @@ fi
 if [ "${Vg_Param}" = "deploy" -a ${CR} -eq 0 ]
 then 
     deployCluster
+    configCluster
     CR=$?
 fi
 
@@ -310,9 +347,23 @@ fi
 
 if [ "${Vg_Param}" = "info" -a ${CR} -eq 0 ]
 then 
-    show_info
+    showInfo
     CR=$?
 fi
+
+if [ "${Vg_Param}" = "start_hadoop" -a ${CR} -eq 0 ]
+then
+    startCluster
+    CR=$?
+    showInfo
+fi
+
+if [ "${Vg_Param}" = "stop_hadoop" -a ${CR} -eq 0 ]
+then
+    stopCluster
+    CR=$?
+fi
+
 
 
 if [ ${CR} -eq 0 ]

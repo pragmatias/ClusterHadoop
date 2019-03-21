@@ -2,7 +2,7 @@ FROM centos:7
 
 #Configuration du proxy
 ENV http_proxy http://usr:pwd@192.168.77.12:8080
-ENV https_proxy http://usr:pwd@192.168.77.12:8080
+ENV https_proxy http://usr:psw@192.168.77.12:8080
 
 #Configuration package hadoop
 ENV hadoop_pkg hadoop-3.2.0
@@ -14,11 +14,13 @@ ENV JAVA_HOME /usr/lib/jvm/jre
 EXPOSE 22
 EXPOSE 80
 EXPOSE 7077
+EXPOSE 8042
 EXPOSE 8081
 EXPOSE 8080
 EXPOSE 8088
 EXPOSE 9000
 EXPOSE 9001
+EXPOSE 9864
 EXPOSE 9866
 EXPOSE 9870
 

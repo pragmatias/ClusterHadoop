@@ -5,12 +5,9 @@ Here, you will find some scripts and config files to create a small cluster with
 <h2 align="center">Todo List</h2>
 
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
-- [ ] Add usage function (managerCluster)
 - [ ] Add log function (managerCluster)
 - [ ] Hadoop configuration files modification to use less memory
 - [ ] Management of the docker command return
-- [ ] Add the management of the hadoop archive (3.2.0) in the main script
-- [ ] Add the volume management to store the hadoop data in the host disk (nameNode/dataNode/namesecondary/tmp)
 - [ ] Clean the list of port (expose)
 - [ ] Add Scala in the main container
 - [ ] Add Spark node in the cluster (container + node)
