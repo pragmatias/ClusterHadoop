@@ -42,9 +42,9 @@ Here, you will find some scripts and config files to create a small cluster with
 - Add group "docker" for the user : `sudo usermod -G docker -a <username>`
 
 ### Proxy config
- 1. Create systemd/docker folder `mkdir -p /etc/systemd/system/docker.service.d`
- 2. Create the http-proxy.conf file vi /etc/systemd/system/docker.service.d/http-proxy.conf
-  2.1. `sudo echo "[Service]" > /etc/systemd/system/docker.service.d/http-proxy.conf`
-  2.2. `sudo echo "Environment=\"HTTP_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
-  2.3. `sudo echo "Environment=\"HTTPS_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
- 3. Restart docker service `sudo systemctl restart docker`
+ 1. Create systemd/docker folder : `mkdir -p /etc/systemd/system/docker.service.d`
+ 2. Create the file http-proxy.conf
+   1. `sudo echo "[Service]" > /etc/systemd/system/docker.service.d/http-proxy.conf`
+   2. `sudo echo "Environment=\"HTTP_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
+   3. `sudo echo "Environment=\"HTTPS_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
+ 3. Restart docker service : `sudo systemctl restart docker`
