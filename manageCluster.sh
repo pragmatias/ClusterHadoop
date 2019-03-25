@@ -11,8 +11,8 @@ Vg_configFileSlaves="configSlaves.cfg"
 Vg_dirRoot=${PWD}
 
 # Global parameter docker image
-Vg_dirDockerImage="centos"
-Vg_nameDockerImage="centos_hadoop"
+Vg_dirDockerImage="hadoop"
+Vg_nameDockerImage="alpine_hadoop"
 Vg_nameDockerFile="Dockerfile"
 
 
@@ -22,15 +22,40 @@ Vg_nameNetwork="ClusterNet"
 Vg_dirData="${Vg_dirRoot}/data"
 
 function buildCluster {
-    mkdir -p ${Vg_dirRoot}/${Vg_dirDockerImage}/package
-    if [ ! -e "${Vg_dirRoot}/${Vg_dirDockerImage}/package/hadoop-3.2.0.tar.gz" ]
+    mkdir -p ${Vg_dirRoot}/package
+    if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.0.tar.gz" ]
     then
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz in ${Vg_dirDockerImage}/package"
+        cd ${Vg_dirRoot}/package
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz in package"
         wget http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then
+            echo `date '+%Y-%m-%d %H:%M:%S'`" - ERROR [KO]"
+            cd -
+            return 1
+        fi
+        cd -
     fi
 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build ${Vg_dirDockerImage}/. -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
-    docker build ${Vg_dirDockerImage}/. -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}
+    if [ ! -e "${Vg_dirRoot}/package/scala-2.12.8.tgz" ]
+    then
+        cd ${Vg_dirRoot}/package
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz in package"
+        wget https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then
+            echo `date '+%Y-%m-%d %H:%M:%S'`" - ERROR [KO]"
+            cd -
+            return 1
+        fi
+        cd -
+    fi
+
+
+    echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
+    docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}
     if [ ${?} -ne 0 ]
     then 
         echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build ${Vg_nameDockerImage} [KO]"
@@ -40,7 +65,6 @@ function buildCluster {
     fi
 
     return 0
-    
 }
 
 
@@ -145,8 +169,8 @@ function createCluster {
         mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
 
         #create container
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker run -Pd -v ${Vg_dirRoot}/${Vg_dirDockerImage}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
-        docker run -Pd -v ${Vg_dirRoot}/${Vg_dirDockerImage}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}
         sleep 5
     done
     
@@ -164,10 +188,10 @@ function createCluster {
 function configCluster {
     echo `date '+%Y-%m-%d %H:%M:%S'`" - Start configCluster"
     Vl_tmpListContainer="configClusterSSH_list_container.tmp"
-    Vl_configAuthSSH=${Vg_dirDockerImage}/config/authorized_keys
-    Vl_configHostsSSH=${Vg_dirDockerImage}/config/known_hosts
-    Vl_configHostsServeur=${Vg_dirDockerImage}/config/hosts
-    Vl_configHadoopWorkers=${Vg_dirDockerImage}/config/workers
+    Vl_configAuthSSH=config/authorized_keys
+    Vl_configHostsSSH=config/known_hosts
+    Vl_configHostsServeur=config/hosts
+    Vl_configHadoopWorkers=config/workers
     
     # Get the potentiel list of image to stop
     rm -f ${Vl_tmpListContainer}
@@ -188,6 +212,11 @@ function configCluster {
     #get public ssh key from all nodes
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
+        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
+        docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh
+        sleep 3
+        docker exec -u hadoop -d ${tmpNode} chmod +x /home/hadoop/manageDockerSSH.sh
+        sleep 2
         echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh \"get_ssh\""
         docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh "get_ssh"
         sleep 5
@@ -328,7 +357,7 @@ fi
 if [ "${Vg_Param}" = "deploy" -a ${CR} -eq 0 ]
 then 
     deployCluster
-    configCluster
+    #configCluster
     CR=$?
 fi
 

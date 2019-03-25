@@ -1,8 +1,10 @@
 FROM centos:7
 
+MAINTAINER pragmatias
+
 #Configuration du proxy
-ENV http_proxy http://usr:pwd@192.168.77.12:8080
-ENV https_proxy http://usr:psw@192.168.77.12:8080
+#ENV http_proxy http://usr:pwd@192.168.77.12:8080
+#ENV https_proxy http://usr:pwd@192.168.77.12:8080
 
 #Configuration package hadoop
 ENV hadoop_pkg hadoop-3.2.0

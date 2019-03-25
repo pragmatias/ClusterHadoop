@@ -4,6 +4,7 @@ Here, you will find some scripts and config files to create a small cluster with
 
 <h2 align="center">Todo List</h2>
 
+- [ ] Use alpine image ?
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
 - [ ] Add log function (managerCluster)
 - [ ] Hadoop configuration files modification to use less memory
