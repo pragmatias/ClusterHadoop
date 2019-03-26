@@ -21,17 +21,35 @@ Vg_nameMasterNode="nodemaster"
 Vg_nameNetwork="ClusterNet"
 Vg_dirData="${Vg_dirRoot}/data"
 
+
+
+function logMessage {
+    #gestion des parametres
+    type=$1
+    message=$2
+
+    statut_date=`date "+%Y-%m-%d"`
+    statut_time=`date "+%H:%M:%S"`
+
+    #affichage du message dans la sortie courante
+    echo "${statut_date} ${statut_time} - ${type} - ${message}"
+}
+
+
+
+
 function buildCluster {
     mkdir -p ${Vg_dirRoot}/package
     if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.0.tar.gz" ]
     then
         cd ${Vg_dirRoot}/package
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz in package"
-        wget http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz
+        Vl_cmd="wget http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz"
+        logMessage "INF" "Get Hadoop archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
+        ${Vl_cmd}
         CR=$?
         if [ ${CR} -ne 0 ]
         then
-            echo `date '+%Y-%m-%d %H:%M:%S'`" - ERROR [KO]"
+            logMessage "ERR" "Get Hadoop archive [${CR}]"
             cd -
             return 1
         fi
@@ -41,12 +59,13 @@ function buildCluster {
     if [ ! -e "${Vg_dirRoot}/package/scala-2.12.8.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - get hadoop archive https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz in package"
-        wget https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz
+        Vl_cmd="wget https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz"
+        logMessage "INF" "Get Scala archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
+        ${Vl_cmd}        
         CR=$?
         if [ ${CR} -ne 0 ]
         then
-            echo `date '+%Y-%m-%d %H:%M:%S'`" - ERROR [KO]"
+            logMessage "ERR" "Get Scala archive [${CR}]"
             cd -
             return 1
         fi
@@ -54,14 +73,16 @@ function buildCluster {
     fi
 
 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
-    docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}
-    if [ ${?} -ne 0 ]
+    Vl_cmd="docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    CR=$?
+    if [ ${CR} -ne 0 ]
     then 
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build ${Vg_nameDockerImage} [KO]"
+        logMessage "ERR" "docker build ${Vg_nameDockerImage} [KO]"
         return 1
     else
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker build ${Vg_nameDockerImage} [OK]"
+        logMessage "INF" "docker build ${Vg_nameDockerImage} [OK]"
     fi
 
     return 0
@@ -81,7 +102,7 @@ function deployCluster {
 
 function destroyCluster {
 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - Start destroyCluster"
+    logMessage "INF" "Start destroyCluster"
     Vl_tmpListContainer="destroyCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
@@ -94,7 +115,7 @@ function destroyCluster {
         cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
     fi
 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - List of the node : `cat ${Vl_tmpListContainer}`"
+    logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
     
     #execution on the list of node
     for tmpNode in `cat ${Vl_tmpListContainer}`
@@ -102,13 +123,13 @@ function destroyCluster {
         Vl_idContainer=`docker ps -a --filter name=${tmpNode}$ -q`
         if [ "x${Vl_idContainer}" != "x" ]
         then
-            echo `date '+%Y-%m-%d %H:%M:%S'`" - Name ${tmpNode} exist [id=${Vl_idContainer}]"
+            logMessage "INF" "Name ${tmpNode} exist [id=${Vl_idContainer}]"
             
-            echo `date '+%Y-%m-%d %H:%M:%S'`" - docker kill ${Vl_idContainer}"
+            logMessage "INF" "docker kill ${Vl_idContainer}"
             docker kill ${Vl_idContainer}
-            sleep 5
+            sleep 3
             
-            echo `date '+%Y-%m-%d %H:%M:%S'`" - docker rm ${Vl_idContainer}"
+            logMessage "INF" "docker rm ${Vl_idContainer}"
             docker rm ${Vl_idContainer}
             sleep 2
         fi
@@ -122,15 +143,14 @@ function destroyCluster {
     Vl_idNetwork=`docker network list --filter name=${Vg_nameNetwork}$ -q`
     if [ "x${Vl_idNetwork}" != "x" ]
     then
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - Network ${Vg_nameNetwork} exist [id=${Vl_idNetwork}]"
+        logMessage "INF" "Network ${Vg_nameNetwork} exist [id=${Vl_idNetwork}]"
         
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker network rm ${Vl_idNetwork}"
+        logMessage "INF" "docker network rm ${Vl_idNetwork}"
         docker network rm ${Vl_idNetwork}
         sleep 2
     fi
     
-    
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - End destroyCluster"
+    logMessage "INF" "End destroyCluster"
     return 0
 }
 
@@ -139,7 +159,7 @@ function destroyCluster {
 
 function createCluster {
 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - Start createCluster"
+    logMessage "INF" "Start createCluster"
     Vl_tmpListContainer="createCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
@@ -152,11 +172,11 @@ function createCluster {
         cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
     fi
     
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - List of the node : `cat ${Vl_tmpListContainer}`"
+    logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
     
     
     #create docker network
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - docker network create --driver bridge ${Vg_nameNetwork}"
+    logMessage "INF" "docker network create --driver bridge ${Vg_nameNetwork}"
     docker network create --driver bridge ${Vg_nameNetwork}
     sleep 2
 
@@ -165,12 +185,14 @@ function createCluster {
     do
         
         #create data folder
+        logMessage "INF" "Create the folder (data)"
         Vl_dirData="${Vg_dirData}/${tmpNode}"
         mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
 
         #create container
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
-        docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}
+        Vl_cmd="docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
         sleep 5
     done
     
@@ -178,7 +200,7 @@ function createCluster {
     rm -f ${Vl_tmpListContainer}
     
     
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - End destroyCluster"
+    logMessage "INF" "End destroyCluster"
     return 0
 }
 
@@ -186,7 +208,7 @@ function createCluster {
 
 
 function configCluster {
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - Start configCluster"
+    logMessage "INF" "Start configCluster"
     Vl_tmpListContainer="configClusterSSH_list_container.tmp"
     Vl_configAuthSSH=config/authorized_keys
     Vl_configHostsSSH=config/known_hosts
@@ -207,27 +229,32 @@ function configCluster {
         cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
     fi
     
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - List of the node : `cat ${Vl_tmpListContainer}`"
+    logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
     
     #get public ssh key from all nodes
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
-        docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
         sleep 3
-        docker exec -u hadoop -d ${tmpNode} chmod +x /home/hadoop/manageDockerSSH.sh
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} chmod +x /home/hadoop/manageDockerSSH.sh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
         sleep 2
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh \"get_ssh\""
-        docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh "get_ssh"
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh get_ssh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
         sleep 5
     done
     
     #set authorized_keys on all nodes
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh \"set_ssh\""
-        docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh "set_ssh"
-        sleep 1
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh set_ssh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
+        sleep 2
     done
     
     
@@ -251,32 +278,37 @@ function configCluster {
         echo -e "${Vl_tmpIP}\t${tmpNode}" >> ${Vl_configHostsServeur}
         
         #Gestion des hosts ssh
-        docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh "get_host" "${tmpNode},${Vl_tmpIP}"
-        sleep 5
+        Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh \"get_host\" \"${tmpNode},${Vl_tmpIP}\""
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
+        sleep 3
     done
     
     #set known_hosts on all nodes
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh \"set_host\""
-        docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh "set_host"
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh set_host"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
         sleep 1
     done
     
     
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u root -d ${tmpNode} cp /config/hosts /etc/hosts"
-        docker exec -u root -d ${tmpNode} cp /config/hosts /etc/hosts
-        sleep 3
+        Vl_cmd="docker exec -u root -d ${tmpNode} cp /config/hosts /etc/hosts"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
+        sleep 2
     done    
         
         
     #Define nodes (slave)
     cat ${Vg_configFileSlaves} > ${Vl_configHadoopWorkers}
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/slaves /home/hadoop/hadoop/etc/hadoop/slaves"
-    docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/hadoop/etc/hadoop/workers
-    sleep 3
+    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/hadoop/etc/hadoop/workers"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 2
     
     
     
@@ -287,7 +319,7 @@ function configCluster {
     rm -f ${Vl_configHostsServeur}
     rm -f ${Vl_configHadoopWorkers}
     
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - End configCluster"
+    logMessage "INF" "End configCluster"
     
     return 0
 }
@@ -298,18 +330,26 @@ function configCluster {
 
 function startCluster {
     #docker exec -u hadoop -d nodemaster hdfs namenode -format
-    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-dfs.sh
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-dfs.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
     sleep 5
-    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-yarn.sh
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-yarn.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
     sleep 5
     return 0
 }
 
 
 function stopCluster {
-    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-yarn.sh
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-yarn.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
     sleep 5
-    docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-dfs.sh
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-dfs.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
     sleep 5
     return 0
 }
@@ -397,9 +437,9 @@ fi
 
 if [ ${CR} -eq 0 ]
 then 
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - End [OK]"
+    logMessage "INF" "End [OK]"
 else
-    echo `date '+%Y-%m-%d %H:%M:%S'`" - End [KO]"
+    logMessage "ERR" "End [KO]"
 fi
 
 exit ${CR}
