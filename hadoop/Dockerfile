@@ -8,12 +8,15 @@ MAINTAINER pragmatias
 
 #Configuration package hadoop
 ENV HADOOP_PKG hadoop-3.2.0
+ENV SCALA_PKG scala-2.12.8
+ENV SPARK_PKG spark-2.4.0-bin-hadoop2.7
 
 #Configuration des variables d'environnement
 ENV JAVA_HOME /usr/lib/jvm/java/jre
 
 #Root user
 USER root
+WORKDIR /tmp
 
 #Install (update)
 RUN yum -y update \
@@ -41,11 +44,19 @@ RUN cp /root/.ssh/id_rsa.pub /etc/ssh/ssh_host_rsa_key.pub \
     && cp /root/.ssh/id_rsa /etc/ssh/ssh_host_rsa_key
 
 
+#Install Scala
+COPY --chown=root package/${SCALA_PKG}.tgz /tmp/
+RUN cd /tmp \
+    && tar -xzf ${SCALA_PKG}.tgz \
+    && mv ${SCALA_PKG} /usr/share/scala \
+    && ln -s /usr/share/scala/bin/* /usr/bin \
+    && rm ${SCALA_PKG}.tgz
+
+
 
 #Configuration du user HADOOP
 RUN groupadd hadoop \
-    && useradd -ms /bin/bash hadoop -g hadoop -G wheel,users 
-#    && echo 'hadoop:hadoop' | chpasswd 
+    && useradd -ms /bin/bash hadoop -g hadoop -G wheel,users
 
 
 USER hadoop
@@ -64,6 +75,13 @@ RUN tar -xzf ${HADOOP_PKG}.tar.gz \
     && mv ${HADOOP_PKG} hadoop \
     && rm ${HADOOP_PKG}.tar.gz
 
+#Installation Spark
+COPY --chown=hadoop package/${SPARK_PKG}.tgz /home/hadoop/
+RUN tar -xzf ${SPARK_PKG}.tgz \
+    && mv ${SPARK_PKG} spark \
+    && rm ${SPARK_PKG}.tgz
+
+
 #Creation repertoire necessaire hadoop
 RUN mkdir -p /home/hadoop/hadoop/logs \
              /home/hadoop/data/nameNode \
@@ -79,7 +97,10 @@ RUN echo "PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:\$PATH" >> /home
 RUN echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.profile
-
+RUN echo "export SPARK_DIST_CLASSPATH=\$(hadoop classpath)" >> /home/hadoop/.bashrc
+RUN echo "export SPARK_DIST_CLASSPATH=\$(hadoop classpath)" >> /home/hadoop/.profile
+RUN echo "export SPARK_HOME=/home/hadoop/spark" >> /home/hadoop/.profile
+RUN echo "export SPARK_HOME=/home/hadoop/spark" >> /home/hadoop/.bashrc
 RUN echo "export JAVA_HOME=${JAVA_HOME}" >> /home/hadoop/.profile
 RUN echo "export JAVA_HOME=${JAVA_HOME}" >> /home/hadoop/.bashrc
 
@@ -90,9 +111,9 @@ RUN echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.
 RUN echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 
 
-#Copie des fichiers de configuration
-COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml config/hadoop/mapred-site.xml config/hadoop/yarn-site.xml /home/hadoop/hadoop/etc/hadoop/
 
+#Copie des fichiers de configuration hadoop
+COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml config/hadoop/mapred-site.xml config/hadoop/yarn-site.xml /home/hadoop/hadoop/etc/hadoop/
 
 #Root
 USER root
@@ -101,14 +122,15 @@ USER root
 #SSH
 EXPOSE 22
 #HTTP
-EXPOSE 80
+EXPOSE 80 8080
 #NameNode UI (& secondary namenode)
 EXPOSE 9870 9871 9868 9869
 #Resource Manager UI (yarn)
 EXPOSE 8088 8042
 #Datanode UI
 EXPOSE 9864 9865 9866 9867 9000
-
+#Spark
+EXPOSE 7077
 
 #Execution du service SSH 
 CMD ["/usr/sbin/sshd", "-D"]

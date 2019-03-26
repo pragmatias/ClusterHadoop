@@ -1,0 +1,20 @@
+FROM alpine:3.9
+
+MAINTAINER pragmatias
+
+EXPOSE 22
+EXPOSE 80
+
+USER root
+
+RUN apk update && apk add --no-cache openssh openssh-server openssh-client bash
+
+
+RUN echo 'Y' | ssh-keygen -b 4096 -t rsa -N '' -f /root/.ssh/id_rsa
+
+
+
+
+CMD ["/usr/sbin/sshd", "-D"]
+
+

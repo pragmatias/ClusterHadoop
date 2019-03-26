@@ -61,7 +61,7 @@ function buildCluster {
         cd ${Vg_dirRoot}/package
         Vl_cmd="wget https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz"
         logMessage "INF" "Get Scala archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
-        ${Vl_cmd}        
+        ${Vl_cmd}
         CR=$?
         if [ ${CR} -ne 0 ]
         then
@@ -71,6 +71,24 @@ function buildCluster {
         fi
         cd -
     fi
+
+    if [ ! -e "${Vg_dirRoot}/package/spark-2.4.0-bin-hadoop2.7.tgz" ]
+    then
+        cd ${Vg_dirRoot}/package
+        Vl_cmd="wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-hadoop2.7.tgz"
+        logMessage "INF" "Get Spark archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
+        ${Vl_cmd}
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then
+            logMessage "ERR" "Get Spark archive [${CR}]"
+            cd -
+            return 1
+        fi
+        cd -
+    fi
+
+
 
 
     Vl_cmd="docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
@@ -309,7 +327,10 @@ function configCluster {
     ${Vl_cmd}
     sleep 2
     
-    
+    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/spark/conf/slaves"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 2
     
     #delete temporary files
     rm -f ${Vl_tmpListContainer}
@@ -337,11 +358,27 @@ function startCluster {
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
     sleep 5
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/start-master.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/start-slaves.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
     return 0
 }
 
 
 function stopCluster {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/stop-slaves.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/stop-master.sh"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-yarn.sh"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
@@ -366,8 +403,9 @@ function formatCluster {
 
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
-  echo "Hadoop info @ nodemaster: http://$masterIp:8088/cluster"
-  echo "DFS Health @ nodemaster : http://$masterIp:9870/dfshealth.html"
+  echo "Hadoop info @ nodemaster : http://${masterIp}:8088/cluster"
+  echo "DFS Health @ nodemaster  : http://${masterIp}:9870/dfshealth.html"
+  echo "Spark info @ nodemaster  : http://${masterIP}:8080"
 }
 
 function usage {

@@ -4,14 +4,10 @@ Here, you will find some scripts and config files to create a small cluster with
 
 <h2 align="center">Todo List</h2>
 
-- [ ] Use alpine image ?
+- [ ] Add Spark node in the cluster (container + node)
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
-- [ ] Add log function (managerCluster)
 - [ ] Hadoop configuration files modification to use less memory
 - [ ] Management of the docker command return
-- [ ] Clean the list of port (expose)
-- [ ] Add Scala in the main container
-- [ ] Add Spark node in the cluster (container + node)
 
 
 <h2 align="center">Scripts</h2>
@@ -49,3 +45,7 @@ Here, you will find some scripts and config files to create a small cluster with
    2. `sudo echo "Environment=\"HTTP_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
    3. `sudo echo "Environment=\"HTTPS_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
  3. Restart docker service : `sudo systemctl restart docker`
+
+<h2 align="center">Info</h2>
+### Using Alpine container
+- Alpine Java don't work with hadoop cluster (java issues / musl instead of glibc)
