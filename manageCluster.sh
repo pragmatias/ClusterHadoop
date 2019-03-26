@@ -200,7 +200,7 @@ function createCluster {
     rm -f ${Vl_tmpListContainer}
     
     
-    logMessage "INF" "End destroyCluster"
+    logMessage "INF" "End createCluster"
     return 0
 }
 
@@ -272,7 +272,6 @@ function configCluster {
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
         Vl_tmpIP=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${tmpNode}`
-        echo `date '+%Y-%m-%d %H:%M:%S'`" - docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh \"get_host\" \"${tmpNode},${Vl_tmpIP}\""
         
         #Ecriture du fichier "/etc/hosts" pour le root
         echo -e "${Vl_tmpIP}\t${tmpNode}" >> ${Vl_configHostsServeur}
@@ -355,6 +354,16 @@ function stopCluster {
 }
 
 
+function formatCluster {
+    Vl_cmd="docker exec -u hadoop -d nodemaster hdfs namenode -format"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    return 0
+}
+
+
+
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
   echo "Hadoop info @ nodemaster: http://$masterIp:8088/cluster"
@@ -362,7 +371,7 @@ function showInfo {
 }
 
 function usage {
-    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop]"
+    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop]"
     echo "list of options :"
     echo "     - build : build the docker image"
     echo "     - deploy : deploy the docker container"
@@ -370,12 +379,13 @@ function usage {
     echo "     - info : give information about webbapps (cluster webUI)"
     echo "     - start_hadoop : start dfs & yarn services (hadoop)"
     echo "     - stop_hadoop : stop dfs & yarn services (hadoop)"
+    echo "     - format_hadoop : format namenode (hadoop)"
 }
 
 Vg_Param=$1
 CR=0
 
-Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|" | grep "|${Vg_Param}|" | wc -l)
+Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop" | grep "|${Vg_Param}|" | wc -l)
 
 if [ ${Vg_TestArgs} -eq 0 ]
 then 
@@ -433,6 +443,12 @@ then
     CR=$?
 fi
 
+
+if [ "${Vg_Param}" = "format_hadoop" -a ${CR} -eq 0 ]
+then
+    formatCluster
+    CR=$?
+fi
 
 
 if [ ${CR} -eq 0 ]
