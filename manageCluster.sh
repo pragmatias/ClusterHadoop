@@ -12,7 +12,7 @@ Vg_dirRoot=${PWD}
 
 # Global parameter docker image
 Vg_dirDockerImage="hadoop"
-Vg_nameDockerImage="alpine_hadoop"
+Vg_nameDockerImage="centos_hadoop"
 Vg_nameDockerFile="Dockerfile"
 
 
