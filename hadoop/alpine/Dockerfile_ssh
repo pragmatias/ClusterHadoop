@@ -1,0 +1,45 @@
+FROM alpine:3.9
+
+#Configuration du proxy
+#ENV http_proxy http://usr:pwd@192.168.77.12:8080
+#ENV https_proxy http://usr:pwd@192.168.77.12:8080
+
+RUN apk --update add --no-cache openssh bash \
+    && sed -i s/#PermitRootLogin.*/PermitRootLogin\ yes/ /etc/ssh/sshd_config \
+#    && echo "root:root" | chpasswd \
+    && rm -rf /var/cache/apk/*
+
+RUN sed -ie 's/#Port 22/Port 22/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_key/HostKey \/etc\/ssh\/ssh_host_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_rsa_key/HostKey \/etc\/ssh\/ssh_host_rsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_dsa_key/HostKey \/etc\/ssh\/ssh_host_dsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_ecdsa_key/HostKey \/etc\/ssh\/ssh_host_ecdsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_ed25519_key/HostKey \/etc\/ssh\/ssh_host_ed25519_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config
+
+#RUN echo "PubkeyAuthentication yes" >> /etc/ssh/ssh_config
+#RUN echo "Host *" >> /etc/ssh/ssh_config
+
+RUN /usr/bin/ssh-keygen -A
+RUN ssh-keygen -t rsa -b 4096 -f  /etc/ssh/ssh_host_key
+
+#Configuration du user HADOOP
+RUN addgroup hadoop \
+    && adduser -D -s /bin/bash hadoop -G hadoop \
+    && adduser hadoop wheel \
+    && adduser hadoop users 
+#    && echo 'hadoop:hadoop' | chpasswd
+
+USER hadoop
+WORKDIR /home/hadoop
+
+RUN mkdir /home/hadoop/.ssh 
+#    && echo PubkeyAcceptedKeyTypes +ssh-dss >> /home/hadoop/.ssh/config \
+#    && echo PasswordAuthentication no >> /home/hadoop/.ssh/config
+
+COPY --chown=hadoop ssh/id_rsa.pub /home/hadoop/.ssh/authorized_keys
+
+USER root
+RUN sed -i 's@hadoop:!@hadoop:*@g' /etc/shadow
+EXPOSE 22
+CMD ["/usr/sbin/sshd","-D","-e"]

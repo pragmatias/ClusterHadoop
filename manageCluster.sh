@@ -332,7 +332,7 @@ function startCluster {
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-dfs.sh"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 5
+    sleep 8
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-yarn.sh"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
@@ -355,7 +355,7 @@ function stopCluster {
 
 
 function formatCluster {
-    Vl_cmd="docker exec -u hadoop -d nodemaster hdfs namenode -format"
+    Vl_cmd="docker exec -u hadoop -d nodemaster hadoop/bin/hdfs namenode -format"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
     sleep 5
@@ -385,7 +385,7 @@ function usage {
 Vg_Param=$1
 CR=0
 
-Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop" | grep "|${Vg_Param}|" | wc -l)
+Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|" | grep "|${Vg_Param}|" | wc -l)
 
 if [ ${Vg_TestArgs} -eq 0 ]
 then 

@@ -1,120 +1,116 @@
-FROM alpine:3.9
+FROM centos:7
 
 MAINTAINER pragmatias
 
 #Configuration du proxy
 #ENV http_proxy http://usr:pwd@192.168.77.12:8080
-#ENV https_proxy http://usr:pwd@192.168.77.12:8080
+#ENV https_proxy http:/usr:pwd@192.168.77.12:8080
 
+#Configuration package hadoop
+ENV HADOOP_PKG hadoop-3.2.0
 
-#Variable environnement
-ENV hadoop_pkg hadoop-3.2.0
-ENV JAVA_HOME /usr/lib/jvm/default-jvm/jre
+#Configuration des variables d'environnement
+ENV JAVA_HOME /usr/lib/jvm/java/jre
 
-#Exposisiotn des ports
-EXPOSE 22
-EXPOSE 80
-EXPOSE 7077
-EXPOSE 8042
-EXPOSE 8081
-EXPOSE 8080
-EXPOSE 8088
-EXPOSE 9000
-EXPOSE 9001
-EXPOSE 9864
-EXPOSE 9866
-EXPOSE 9870
-
-
-#Root configuration
+#Root user
 USER root
 
-#Installation des packages
-RUN apk update \
-    && apk add --no-cache openjdk8 \
-                          openssh \
-                          openssh-server \
-                          openssh-client \
-                          bash
+#Install (update)
+RUN yum -y update \
+    && yum clean all
 
+#Install (packages)
+RUN yum -y install \
+        java-1.8.0-openjdk-devel \
+        openssh-server \
+        openssh-clients \
+        && yum clean all
 
-#Configuration de la partie SSH
- RUN echo 'Y' | ssh-keygen -b 4096 -t rsa -N '' -f /root/.ssh/id_rsa
- #COPY --chown=root config/ssh/id_rsa.pub /root/.ssh/authorized_keys
- 
+#Generation de la cle SSH (root/RSA)
+RUN echo 'Y' | ssh-keygen -b 4096 -t rsa -N '' -f /root/.ssh/id_rsa
+
 #Configuration du serveur SSH
-RUN echo "PubkeyAuthentication yes" >> /etc/ssh/ssh_config
-RUN echo "Host *" >> /etc/ssh/ssh_config
-#RUN sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
-RUN sed -i 's@#HostKey /etc/ssh/ssh_host_rsa_key@HostKey /etc/ssh/ssh_host_rsa_key@' /etc/ssh/sshd_config
-RUN sed -i 's@#SyslogFacility AUTH@SyslogFacility AUTHPRIV@' /etc/ssh/sshd_config
-#RUN sed -i 's@HostKey /etc/ssh/ssh_host_ed25519_key@#HostKey /etc/ssh/ssh_host_ed25519_key@' /etc/ssh/sshd_config
-RUN sed -i 's@#PasswordAuthentication yes@PasswordAuthentication no@' /etc/ssh/sshd_config
-#RUN sed -i 's@#PubkeyAuthentication yes@PubkeyAuthentication yes@' /etc/ssh/sshd_config
-RUN sed -i 's@#ChallengeResponseAuthentication yes@ChallengeResponseAuthentication no@' /etc/ssh/sshd_config
-RUN sed -i 's@#GSSAPIAuthentication no@GSSAPIAuthentication yes@' /etc/ssh/sshd_config
-RUN sed -i 's@#GSSAPICleanupCredentials yes@GSSAPICleanupCredentials no@' /etc/ssh/sshd_config
-RUN sed -i 's@#UsePAM no@UsePAM yes@' /etc/ssh/sshd_config
-RUN sed -i 's@AllowTcpForwarding no@#AllowTcpForwarding yes@' /etc/ssh/sshd_config
-RUN sed -i 's@GatewayPorts no@#GatewayPorts no@' /etc/ssh/sshd_config
-RUN sed -i 's@X11Forwarding no@X11Forwarding yes@' /etc/ssh/sshd_config
+RUN echo "PubkeyAuthentication yes" >> /etc/ssh/ssh_config \
+    && echo "Host *" >> /etc/ssh/ssh_config \
+    && sed -i 's@HostKey /etc/ssh/ssh_host_dsa_key@#HostKey /etc/ssh/ssh_host_dsa_key@' /etc/ssh/sshd_config \
+    && sed -i 's@HostKey /etc/ssh/ssh_host_ecdsa_key@#HostKey /etc/ssh/ssh_host_ecdsa_key@' /etc/ssh/sshd_config \
+    && sed -i 's@HostKey /etc/ssh/ssh_host_ed25519_key@#HostKey /etc/ssh/ssh_host_ed25519_key@' /etc/ssh/sshd_config \
+    && sed -i 's@PasswordAuthentication yes@PasswordAuthentication no@' /etc/ssh/sshd_config
+#Mise en place des cle RSA
+RUN cp /root/.ssh/id_rsa.pub /etc/ssh/ssh_host_rsa_key.pub \
+    && cp /root/.ssh/id_rsa /etc/ssh/ssh_host_rsa_key
 
 
-
-RUN cp /root/.ssh/id_rsa.pub /etc/ssh/ssh_host_rsa_key.pub
-RUN cp /root/.ssh/id_rsa /etc/ssh/ssh_host_rsa_key
 
 #Configuration du user HADOOP
-RUN addgroup hadoop \
-    && adduser -D -s /bin/bash hadoop -G hadoop \
-    && adduser hadoop wheel \
-    && adduser hadoop users
-#    && echo 'hadoop:hadoop' | chpasswd
+RUN groupadd hadoop \
+    && useradd -ms /bin/bash hadoop -g hadoop -G wheel,users 
+#    && echo 'hadoop:hadoop' | chpasswd 
+
 
 USER hadoop
 WORKDIR /home/hadoop
 
-#configuration ssh pour hadoop
+
+#Configuration ssh pour hadoop
 RUN mkdir /home/hadoop/.ssh \
     && echo PubkeyAcceptedKeyTypes +ssh-dss >> /home/hadoop/.ssh/config \
     && echo PasswordAuthentication no >> /home/hadoop/.ssh/config
 
+
 #Installation de hadoop
-COPY --chown=hadoop package/${hadoop_pkg}.tar.gz /home/hadoop/
-RUN tar -xzf ${hadoop_pkg}.tar.gz \
-    && mv ${hadoop_pkg} hadoop \
-    && rm ${hadoop_pkg}.tar.gz
+COPY --chown=hadoop package/${HADOOP_PKG}.tar.gz /home/hadoop/
+RUN tar -xzf ${HADOOP_PKG}.tar.gz \
+    && mv ${HADOOP_PKG} hadoop \
+    && rm ${HADOOP_PKG}.tar.gz
 
 #Creation repertoire necessaire hadoop
-RUN mkdir -p /home/hadoop/hadoop/logs /home/hadoop/data/nameNode /home/hadoop/data/dataNode /home/hadoop/data/namesecondary /home/hadoop/data/tmp \
+RUN mkdir -p /home/hadoop/hadoop/logs \
+             /home/hadoop/data/nameNode \
+             /home/hadoop/data/dataNode \
+             /home/hadoop/data/namesecondary \
+             /home/hadoop/data/tmp \
     && touch /home/hadoop/hadoop/logs/fairscheduler-statedump.log
 
 
 #Gestion de l'environnement
-RUN echo "export PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:\$PATH" >> /home/hadoop/.profile \
-    && echo "PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:\$PATH" >> /home/hadoop/.bashrc \
-    && echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc \
-    && echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.bashrc \
-    && echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.profile \
-    && echo "export JAVA_HOME=/usr/lib/jvm/default-jvm/jre" >> /home/hadoop/.profile \
-    && echo "export JAVA_HOME=/usr/lib/jvm/default-jvm/jre" >> /home/hadoop/.bashrc \
-    && echo JAVA_HOME=/usr/lib/jvmi/default-jvm/jre >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh \
-    && echo HDFS_NAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh \
-    && echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh \
-    && echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo "export PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:\$PATH" >> /home/hadoop/.profile
+RUN echo "PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:\$PATH" >> /home/hadoop/.bashrc
+RUN echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc
+RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.bashrc
+RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.profile
+
+RUN echo "export JAVA_HOME=${JAVA_HOME}" >> /home/hadoop/.profile
+RUN echo "export JAVA_HOME=${JAVA_HOME}" >> /home/hadoop/.bashrc
+
+
+RUN echo JAVA_HOME=${JAVA_HOME} >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo HDFS_NAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 
 
 #Copie des fichiers de configuration
 COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml config/hadoop/mapred-site.xml config/hadoop/yarn-site.xml /home/hadoop/hadoop/etc/hadoop/
 
 
-#COPY --chown=hadoop config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh
-#RUN chmod +x /home/hadoop/manageDockerSSH.sh
-
-#User par defaut
+#Root
 USER root
 
-#Execution du service SSH¤
+#Exposition de port
+#SSH
+EXPOSE 22
+#HTTP
+EXPOSE 80
+#NameNode UI (& secondary namenode)
+EXPOSE 9870 9871 9868 9869
+#Resource Manager UI (yarn)
+EXPOSE 8088 8042
+#Datanode UI
+EXPOSE 9864 9865 9866 9867 9000
+
+
+#Execution du service SSH 
 CMD ["/usr/sbin/sshd", "-D"]
 
 
