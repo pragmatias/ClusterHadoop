@@ -20,8 +20,10 @@ Vg_nameDockerFile="Dockerfile"
 Vg_nameMasterNode="nodemaster"
 Vg_nameNetwork="ClusterNet"
 Vg_dirData="${Vg_dirRoot}/data"
+Vg_keepNetwork="YES"
 
-
+#log file
+LOG=/tmp/$(basename "$0" .sh).log
 
 function logMessage {
     #gestion des parametres
@@ -109,8 +111,6 @@ function buildCluster {
 
 function deployCluster {
 
-    destroyCluster
-
     createCluster
 
     return 0
@@ -174,6 +174,49 @@ function destroyCluster {
 
 
 
+function destroyNetwork {
+    #don't destroy if the parameter "keepNetwork = YES"
+    if [ "${Vg_keepNetwork}" = "YES" -o "${Vg_keepNetwork}" = "yes" ]
+    then 
+        return 0
+    fi
+
+    logMessage "INF" "Start destroyNetwork"
+    
+    #remove docker network (if exist)
+    Vl_idNetwork=`docker network ls --filter name=${Vg_nameNetwork}$ -q`
+    if [ "x${Vl_idNetwork}" != "x" ]
+    then
+        logMessage "INF" "Network ${Vg_nameNetwork} exist [id=${Vl_idNetwork}]"
+        
+        logMessage "INF" "docker network rm ${Vl_idNetwork}"
+        docker network rm ${Vl_idNetwork}
+        sleep 2
+    fi
+    
+    logMessage "INF" "End destroyNetwork"
+    return 0
+}
+
+
+function createNetwork {
+
+    logMessage "INF" "Start createNetwork"
+    
+    Vl_nbNetwork=`docker network ls --filter name=${Vg_nameNetwork}$ -q | wc -l`
+    if [ ${Vl_nbNetwork} -eq 0 ]
+    then 
+        #create docker network
+        logMessage "INF" "docker network create --driver bridge ${Vg_nameNetwork}"
+        docker network create --driver bridge ${Vg_nameNetwork}
+        sleep 2
+    fi
+    
+    logMessage "INF" "End createNetwork"
+    return 0
+}
+
+
 
 function createCluster {
 
@@ -193,10 +236,7 @@ function createCluster {
     logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
     
     
-    #create docker network
-    logMessage "INF" "docker network create --driver bridge ${Vg_nameNetwork}"
-    docker network create --driver bridge ${Vg_nameNetwork}
-    sleep 2
+
 
     #execution on the list of node
     for tmpNode in `cat ${Vl_tmpListContainer}`
@@ -295,7 +335,7 @@ function configCluster {
         echo -e "${Vl_tmpIP}\t${tmpNode}" >> ${Vl_configHostsServeur}
         
         #Gestion des hosts ssh
-        Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh \"get_host\" \"${tmpNode},${Vl_tmpIP}\""
+        Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\""
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
         sleep 3
@@ -403,9 +443,11 @@ function formatCluster {
 
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
+  echo ""
   echo "Hadoop info @ nodemaster : http://${masterIp}:8088/cluster"
-  echo "DFS Health @ nodemaster  : http://${masterIp}:9870/dfshealth.html"
-  echo "Spark info @ nodemaster  : http://${masterIP}:8080"
+  echo "DFS Health  @ nodemaster : http://${masterIp}:9870/dfshealth.html"
+  echo "Spark info  @ nodemaster : http://${masterIp}:8080"
+  echo "Docker      @ nodemaster : docker exec -u hadoop -it nodemaster bash"
 }
 
 function usage {
@@ -444,15 +486,24 @@ fi
 
 if [ "${Vg_Param}" = "deploy" -a ${CR} -eq 0 ]
 then 
-    deployCluster
-    #configCluster
+    createNetwork
     CR=$?
+    if [ ${CR} -eq 0 ]
+    then
+        deployCluster
+        CR=$?
+    fi
 fi
 
 if [ "${Vg_Param}" = "destroy" -a ${CR} -eq 0 ]
 then 
     destroyCluster
     CR=$?
+    if [ ${CR} -eq 0 ]
+    then
+        destroyNetwork
+        CR=$?
+    fi
 fi
 
 
