@@ -41,6 +41,8 @@ function logMessage {
 
 
 function buildCluster {
+    logMessage "INF" "Start buildCluster"
+
     mkdir -p ${Vg_dirRoot}/package
     if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.0.tar.gz" ]
     then
@@ -99,11 +101,11 @@ function buildCluster {
     CR=$?
     if [ ${CR} -ne 0 ]
     then 
-        logMessage "ERR" "docker build ${Vg_nameDockerImage} [KO]"
+        logMessage "ERR" "docker build ${Vg_nameDockerImage} [${CR}]"
         return 1
-    else
-        logMessage "INF" "docker build ${Vg_nameDockerImage} [OK]"
     fi
+
+    logMessage "INF" "End buildCluster"
 
     return 0
 }
@@ -143,13 +145,21 @@ function destroyCluster {
         then
             logMessage "INF" "Name ${tmpNode} exist [id=${Vl_idContainer}]"
             
-            logMessage "INF" "docker kill ${Vl_idContainer}"
-            docker kill ${Vl_idContainer}
-            sleep 3
-            
-            logMessage "INF" "docker rm ${Vl_idContainer}"
-            docker rm ${Vl_idContainer}
-            sleep 2
+            Vl_cmd="docker kill ${Vl_idContainer}"
+            logMessage "INF" "${Vl_cmd}"
+            ${Vl_cmd}
+
+            Vl_cmd="docker rm ${Vl_idContainer}"
+            logMessage "INF" "${Vl_cmd}"
+            ${Vl_cmd}
+
+            Vl_exist=`docker ps -a --filter name=${tmpNode}$ -q | wc -l`
+            if [ ${Vl_exist} -ne 0 ]
+            then
+                logMessage "ERR" "Container ${tmpNode} [${Vl_idContainer}] not deleted"
+                return 1
+            fi
+
         fi
     done
     
@@ -157,17 +167,6 @@ function destroyCluster {
     rm -f ${Vl_tmpListContainer}
     
    
-    #remove docker network (if exist)
-    Vl_idNetwork=`docker network list --filter name=${Vg_nameNetwork}$ -q`
-    if [ "x${Vl_idNetwork}" != "x" ]
-    then
-        logMessage "INF" "Network ${Vg_nameNetwork} exist [id=${Vl_idNetwork}]"
-        
-        logMessage "INF" "docker network rm ${Vl_idNetwork}"
-        docker network rm ${Vl_idNetwork}
-        sleep 2
-    fi
-    
     logMessage "INF" "End destroyCluster"
     return 0
 }
@@ -209,7 +208,12 @@ function createNetwork {
         #create docker network
         logMessage "INF" "docker network create --driver bridge ${Vg_nameNetwork}"
         docker network create --driver bridge ${Vg_nameNetwork}
-        sleep 2
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then
+            logMessage "ERR" "Network ${Vg_nameNetwork} not created"
+            return 1
+        fi
     fi
     
     logMessage "INF" "End createNetwork"
@@ -221,6 +225,7 @@ function createNetwork {
 function createCluster {
 
     logMessage "INF" "Start createCluster"
+
     Vl_tmpListContainer="createCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
@@ -251,7 +256,12 @@ function createCluster {
         Vl_cmd="docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 5
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "Container ${tmpNode} not started"
+            return 1
+        fi
     done
     
     #delete temporary files
@@ -447,7 +457,7 @@ function showInfo {
   echo "Hadoop info @ nodemaster : http://${masterIp}:8088/cluster"
   echo "DFS Health  @ nodemaster : http://${masterIp}:9870/dfshealth.html"
   echo "Spark info  @ nodemaster : http://${masterIp}:8080"
-  echo "Docker      @ nodemaster : docker exec -u hadoop -it nodemaster bash"
+  echo "Container   @ nodemaster : docker exec -u hadoop -it nodemaster bash"
 }
 
 function usage {
