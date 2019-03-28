@@ -4,10 +4,14 @@ Here, you will find some scripts and config files to create a small cluster with
 
 <h2 align="center">Todo List</h2>
 
+- [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on MasterNode
+- [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on SlaveNode
 - [ ] Add Spark node in the cluster (container + node)
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
 - [ ] Hadoop configuration files modification to use less memory
-- [ ] Management of the docker command return
+- [ ] Add information about testing hdfs
+- [ ] Add information about testing yarn
+- [ ] Add information about testing spark
 
 
 <h2 align="center">Scripts</h2>
@@ -46,6 +50,31 @@ Here, you will find some scripts and config files to create a small cluster with
    3. `sudo echo "Environment=\"HTTPS_PROXY=http://user:pwd@ip:port/\"" >> /etc/systemd/system/docker.service.d/http-proxy.conf`
  3. Restart docker service : `sudo systemctl restart docker`
 
+
+<h2 align="center">Testing</h2>
+
+### HDFS
+ 1. Connection to masternode : `docker exec -u hadoop -it nodemaster bash`
+ 2. Create a test folder for the user hadoop : `hdfs dfs -mkdir -p /user/hadoop/test`
+ 3. Create a text file in the test folder : `echo "this is just a little writing test" > sample.txt && hdfs dfs -put sample.txt test && rm sample.txt`
+ 4. Check if the file is in the hdfs test folder : `hdfs dfs -ls test/*`
+
+### Yarn
+ 1. Connection to masternode : `docker exec -u hadoop -it nodemaster bash`
+ 2. Execute the following commande (pi calcul) : `yarn jar ~/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.0.jar pi 10 10`
+
+### Spark
+ 1. Connection to masternode : `docker exec -u hadoop -it nodemaster bash`
+ 2. Execute the spark shell : `spark-shell --master yarn`
+ 3. Check the spark version : `sc.version`
+
+
 <h2 align="center">Info</h2>
+
 ### Using Alpine container
+
 - Alpine Java don't work with hadoop cluster (java issues / musl instead of glibc)
+
+
+
+
