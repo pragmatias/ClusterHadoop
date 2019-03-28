@@ -19,8 +19,14 @@ Vg_nameDockerFile="Dockerfile"
 # Global parameter Cluster
 Vg_nameMasterNode="nodemaster"
 Vg_nameNetwork="ClusterNet"
-Vg_dirData="${Vg_dirRoot}/data"
 Vg_keepNetwork="YES"
+Vg_dirData="${Vg_dirRoot}/data"
+Vg_dirConfigTmp="${Vg_dirRoot}/config/tmp"
+Vg_dirDockerData="/home/hadoop/data"
+Vg_dirDockerConfigTmp="/tmp/docker"
+
+Vg_delayCheckExecCmd=2 #sleep
+Vg_limitCheckExecCmd=20 #rep
 
 #log file
 LOG=/tmp/$(basename "$0" .sh).log
@@ -253,7 +259,8 @@ function createCluster {
         mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
 
         #create container
-        Vl_cmd="docker run -Pd -v ${Vg_dirRoot}/config:/config -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        mkdir -p ${Vg_dirConfigTmp}
+        Vl_cmd="docker run -Pd -v ${Vg_dirConfigTmp}:${Vg_dirDockerConfigTmp} -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -273,17 +280,60 @@ function createCluster {
 }
 
 
+function checkFinDockerExec {
+    Vl_hostname=$1
+    Vl_script=$2
+
+    Vl_fin=0
+    Vl_status=1
+    Vl_ficResultCmd=${Vg_dirConfigTmp}/${hostname}_${Vl_script}.CR
+    Vl_ficResultLog=${Vg_dirConfigTmp}/${hostname}_${Vl_script}.log
+    Vl_passage=0
+
+    while [ ${Vl_fin} -ne 0 ]
+    do
+        if [ -e ${Vl_ficResultCmd} ]
+        then
+            Vl_statusTmp=$(cat test.txt)
+            if [ ${Vl_statusTmp} -eq 0 -o ${Vl_statusTmp} -gt 0 ]
+            then 
+                Vl_status=${Vl_statusTmp}
+                Vl_fin=1
+                rm ${Vl_ficResultCmd}
+            else 
+                sleep ${Vg_delayCheckExecCmd}
+            fi
+        else
+            sleep ${Vg_delayCheckExecCmd}
+        fi
+
+        Vl_passage=$((Vl_passage + 1))
+        if [ ${Vl_passage} -gt ${Vg_limitCheckExecCmd} ]
+        then 
+            Vl_fin=1
+        fi
+    done
+
+    if [ ${Vl_status} -gt 0 ]
+    then 
+        logMessage "ERR" "Check the log file : ${Vl_ficResultLog}"
+        return ${Vl_status}
+    fi
+
+    return 0
+}
 
 
 function configCluster {
     logMessage "INF" "Start configCluster"
     Vl_tmpListContainer="configClusterSSH_list_container.tmp"
-    Vl_configAuthSSH=config/authorized_keys
-    Vl_configHostsSSH=config/known_hosts
-    Vl_configHostsServeur=config/hosts
-    Vl_configHadoopWorkers=config/workers
+    Vl_configAuthSSH=${Vg_dirConfigTmp}/authorized_keys
+    Vl_configHostsSSH=${Vg_dirConfigTmp}/known_hosts
+    Vl_configHostsServeur=${Vg_dirConfigTmp}/hosts
+    Vl_configHadoopWorkers=${Vg_dirConfigTmp}/workers
     
     # Get the potentiel list of image to stop
+    mkdir -p ${Vg_dirConfigTmp}
     rm -f ${Vl_tmpListContainer}
     rm -f ${Vl_configAuthSSH}
     rm -f ${Vl_configHostsSSH}
@@ -298,22 +348,47 @@ function configCluster {
     fi
     
     logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
-    
-    #get public ssh key from all nodes
+
+    #get config scripts
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp /config/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfigTmp}/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 3
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfigTmp}/manageDockerCluster.sh /home/hadoop/manageDockerCluster.sh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
+    done
+
+    sleep 2
+    
+    #config scripts chmod +x
+    for tmpNode in `cat ${Vl_tmpListContainer}`
+    do
         Vl_cmd="docker exec -u hadoop -d ${tmpNode} chmod +x /home/hadoop/manageDockerSSH.sh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 2
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} chmod +x /home/hadoop/manageDockerCluster.sh"
+        logMessage "INF" "${Vl_cmd}"
+        ${Vl_cmd}
+    done
+    
+    sleep 2
+
+    #get public ssh key from all nodes
+    for tmpNode in `cat ${Vl_tmpListContainer}`
+    do
         Vl_cmd="docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh get_ssh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 5
+        sleep 1
+        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh get_ssh [KO]"
+            return 1
+        fi
     done
     
     #set authorized_keys on all nodes
@@ -322,7 +397,14 @@ function configCluster {
         Vl_cmd="docker exec -u hadoop -d ${tmpNode} /home/hadoop/manageDockerSSH.sh set_ssh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 2
+        sleep 1
+        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh set_ssh [KO]"
+            return 1
+        fi
     done
     
     
@@ -348,7 +430,14 @@ function configCluster {
         Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\""
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 3
+        sleep 1
+        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\" [KO]"
+            return 1
+        fi
     done
     
     #set known_hosts on all nodes
@@ -358,15 +447,29 @@ function configCluster {
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
         sleep 1
+        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh set_host [KO]"
+            return 1
+        fi
     done
     
     
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        Vl_cmd="docker exec -u root -d ${tmpNode} cp /config/hosts /etc/hosts"
+        Vl_cmd="docker exec -u root -d ${tmpNode} /home/hadoop/manageDockerSSH.sh cp_root_host"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        sleep 2
+        sleep 1
+        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then 
+            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh cp_root_host [KO]"
+            return 1
+        fi
     done    
         
         
@@ -375,7 +478,6 @@ function configCluster {
     Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/hadoop/etc/hadoop/workers"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 2
     
     Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/spark/conf/slaves"
     logMessage "INF" "${Vl_cmd}"
@@ -397,56 +499,77 @@ function configCluster {
 
 
 
-
 function startCluster {
-    #docker exec -u hadoop -d nodemaster hdfs namenode -format
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-dfs.sh"
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 8
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/start-yarn.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/start-master.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/start-slaves.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
+    sleep 10
+    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh start [KO]"
+        return 1
+    fi
     return 0
 }
 
 
 function stopCluster {
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/stop-slaves.sh"
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 5
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/spark/sbin/stop-master.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-yarn.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/hadoop/sbin/stop-dfs.sh"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
+    sleep 10
+    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh stop [KO]"
+        return 1
+    fi
     return 0
 }
 
 
 function formatCluster {
-    Vl_cmd="docker exec -u hadoop -d nodemaster hadoop/bin/hdfs namenode -format"
+    #delete data for all nodes (without deleting folder)
+    Vl_tmpListContainer="createCluster_list_container.tmp"
+    
+    # Get the potentiel list of image to stop
+    rm -f ${Vl_tmpListContainer}
+    
+    echo ${Vg_nameMasterNode} > ${Vl_tmpListContainer}
+
+    if [ -e ${Vg_configFileSlaves} ]
+    then 
+        cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
+    fi
+    
+    #execution on the list of node
+    for tmpNode in `cat ${Vl_tmpListContainer}`
+    do
+        #create data folder
+        logMessage "INF" "delete files from ${Vg_dirData}/${tmpNode}"
+        rm -f ${Vl_dirData}/logs/*
+        rm -f ${Vl_dirData}/nameNode/*
+        rm -f ${Vl_dirData}/dataNode/*
+        rm -f ${Vl_dirData}/namesecondary/*
+        rm -f ${Vl_dirData}/tmp/*
+    done    
+    rm -f ${Vl_tmpListContainer}
+
+
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh format"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 5
-    return 0
+    sleep 2
+    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh format [KO]"
+        return 1
+    fi
 }
 
 
