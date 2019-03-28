@@ -21,9 +21,11 @@ Vg_nameMasterNode="nodemaster"
 Vg_nameNetwork="ClusterNet"
 Vg_keepNetwork="YES"
 Vg_dirData="${Vg_dirRoot}/data"
-Vg_dirConfigTmp="${Vg_dirRoot}/config/tmp"
+Vg_dirConfig="${Vg_dirRoot}/config"
+Vg_dirTmp="${Vg_dirRoot}/tmp"
 Vg_dirDockerData="/home/hadoop/data"
-Vg_dirDockerConfigTmp="/tmp/docker"
+Vg_dirDockerTmp="/tmp/docker"
+Vg_dirDockerConfig="/mnt/docker"
 
 Vg_delayCheckExecCmd=2 #sleep
 Vg_limitCheckExecCmd=20 #rep
@@ -259,8 +261,8 @@ function createCluster {
         mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
 
         #create container
-        mkdir -p ${Vg_dirConfigTmp}
-        Vl_cmd="docker run -Pd -v ${Vg_dirConfigTmp}:${Vg_dirDockerConfigTmp} -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        mkdir -p ${Vg_dirTmp}
+        Vl_cmd="docker run -Pd -v ${Vg_dirTmp}:${Vg_dirDockerTmp} -v ${Vg_dirConfig}:${Vg_dirDockerConfig} -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -286,8 +288,8 @@ function checkFinDockerExec {
 
     Vl_fin=0
     Vl_status=1
-    Vl_ficResultCmd=${Vg_dirConfigTmp}/${hostname}_${Vl_script}.CR
-    Vl_ficResultLog=${Vg_dirConfigTmp}/${hostname}_${Vl_script}.log
+    Vl_ficResultCmd=${Vg_dirTmp}/${hostname}_${Vl_script}.CR
+    Vl_ficResultLog=${Vg_dirTmp}/${hostname}_${Vl_script}.log
     Vl_passage=0
 
     while [ ${Vl_fin} -ne 0 ]
@@ -327,13 +329,13 @@ function checkFinDockerExec {
 function configCluster {
     logMessage "INF" "Start configCluster"
     Vl_tmpListContainer="configClusterSSH_list_container.tmp"
-    Vl_configAuthSSH=${Vg_dirConfigTmp}/authorized_keys
-    Vl_configHostsSSH=${Vg_dirConfigTmp}/known_hosts
-    Vl_configHostsServeur=${Vg_dirConfigTmp}/hosts
-    Vl_configHadoopWorkers=${Vg_dirConfigTmp}/workers
+    Vl_configAuthSSH=${Vg_dirTmp}/authorized_keys
+    Vl_configHostsSSH=${Vg_dirTmp}/known_hosts
+    Vl_configHostsServeur=${Vg_dirTmp}/hosts
+    Vl_configHadoopWorkers=${Vg_dirTmp}/workers
     
     # Get the potentiel list of image to stop
-    mkdir -p ${Vg_dirConfigTmp}
+    mkdir -p ${Vg_dirTmp}
     rm -f ${Vl_tmpListContainer}
     rm -f ${Vl_configAuthSSH}
     rm -f ${Vl_configHostsSSH}
@@ -352,10 +354,10 @@ function configCluster {
     #get config scripts
     for tmpNode in `cat ${Vl_tmpListContainer}`
     do
-        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfigTmp}/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfig}/scripts/manageDockerSSH.sh /home/hadoop/manageDockerSSH.sh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
-        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfigTmp}/manageDockerCluster.sh /home/hadoop/manageDockerCluster.sh"
+        Vl_cmd="docker exec -u hadoop -d ${tmpNode} cp ${Vg_dirDockerConfig}/scripts/manageDockerCluster.sh /home/hadoop/manageDockerCluster.sh"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
     done
@@ -475,11 +477,11 @@ function configCluster {
         
     #Define nodes (slave)
     cat ${Vg_configFileSlaves} > ${Vl_configHadoopWorkers}
-    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/hadoop/etc/hadoop/workers"
+    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp -f ${Vg_dirDockerTmp}/workers /home/hadoop/hadoop/etc/hadoop/workers"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
     
-    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp /config/workers /home/hadoop/spark/conf/slaves"
+    Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} cp -f ${Vg_dirDockerTmp}/workers /home/hadoop/spark/conf/slaves"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
     sleep 2
