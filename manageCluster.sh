@@ -84,10 +84,10 @@ function buildCluster {
         cd -
     fi
 
-    if [ ! -e "${Vg_dirRoot}/package/spark-2.4.0-bin-hadoop2.7.tgz" ]
+    if [ ! -e "${Vg_dirRoot}/package/spark-2.4.0-bin-without-hadoop.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-hadoop2.7.tgz"
+        Vl_cmd="wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-without-hadoop.tgz"
         logMessage "INF" "Get Spark archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -131,7 +131,7 @@ function deployCluster {
 function destroyCluster {
 
     logMessage "INF" "Start destroyCluster"
-    Vl_tmpListContainer="destroyCluster_list_container.tmp"
+    Vl_tmpListContainer="${Vg_dirTmp}/destroyCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
     rm -f ${Vl_tmpListContainer}
@@ -234,7 +234,7 @@ function createCluster {
 
     logMessage "INF" "Start createCluster"
 
-    Vl_tmpListContainer="createCluster_list_container.tmp"
+    Vl_tmpListContainer="${Vg_dirTmp}/createCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
     rm -f ${Vl_tmpListContainer}
@@ -288,20 +288,19 @@ function checkFinDockerExec {
 
     Vl_fin=0
     Vl_status=1
-    Vl_ficResultCmd=${Vg_dirTmp}/${hostname}_${Vl_script}.CR
-    Vl_ficResultLog=${Vg_dirTmp}/${hostname}_${Vl_script}.log
+    Vl_ficResultCmd=${Vg_dirTmp}/${Vl_hostname}_${Vl_script}.CR
+    Vl_ficResultLog=${Vg_dirTmp}/${Vl_hostname}_${Vl_script}.log
     Vl_passage=0
 
-    while [ ${Vl_fin} -ne 0 ]
+    while [ ${Vl_fin} -eq 0 ]
     do
         if [ -e ${Vl_ficResultCmd} ]
         then
-            Vl_statusTmp=$(cat test.txt)
-            if [ ${Vl_statusTmp} -eq 0 -o ${Vl_statusTmp} -gt 0 ]
+            Vl_statusTmp=`cat ${Vl_ficResultCmd}`
+            if [ ${Vl_statusTmp} -ge 0 ]
             then 
                 Vl_status=${Vl_statusTmp}
                 Vl_fin=1
-                rm ${Vl_ficResultCmd}
             else 
                 sleep ${Vg_delayCheckExecCmd}
             fi
@@ -318,9 +317,15 @@ function checkFinDockerExec {
 
     if [ ${Vl_status} -gt 0 ]
     then 
-        logMessage "ERR" "Check the log file : ${Vl_ficResultLog}"
+        if [ -e ${Vl_ficResultLog} ]
+        then
+            logMessage "ERR" "Check the log file : ${Vl_ficResultLog}"
+        fi
         return ${Vl_status}
     fi
+
+    if [ -e ${Vl_ficResultLog} ]; then rm -f ${Vl_ficResultLog}; fi
+    if [ -e ${Vl_ficResultCmd} ]; then rm -f ${Vl_ficResultCmd}; fi
 
     return 0
 }
@@ -328,7 +333,7 @@ function checkFinDockerExec {
 
 function configCluster {
     logMessage "INF" "Start configCluster"
-    Vl_tmpListContainer="configClusterSSH_list_container.tmp"
+    Vl_tmpListContainer="${Vg_dirTmp}/configClusterSSH_list_container.tmp"
     Vl_configAuthSSH=${Vg_dirTmp}/authorized_keys
     Vl_configHostsSSH=${Vg_dirTmp}/known_hosts
     Vl_configHostsServeur=${Vg_dirTmp}/hosts
@@ -431,13 +436,13 @@ function configCluster {
         #Gestion des hosts ssh
         Vl_cmd="docker exec -u hadoop -d ${Vg_nameMasterNode} /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\""
         logMessage "INF" "${Vl_cmd}"
-        ${Vl_cmd}
+        eval ${Vl_cmd}
         sleep 1
-        checkFinDockerExec "${tmpNode}" "manageDockerSSH.sh"
+        checkFinDockerExec "${Vg_nameMasterNode}" "manageDockerSSH.sh"
         CR=$?
         if [ ${CR} -ne 0 ]
         then 
-            logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\" [KO]"
+            logMessage "ERR" "${Vg_nameMasterNode} : /home/hadoop/manageDockerSSH.sh get_host \"${tmpNode},${Vl_tmpIP}\" [KO]"
             return 1
         fi
     done
@@ -505,12 +510,12 @@ function startCluster {
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 10
-    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
     CR=$?
     if [ ${CR} -ne 0 ]
     then 
-        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh start [KO]"
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh start [KO]"
         return 1
     fi
     return 0
@@ -521,12 +526,12 @@ function stopCluster {
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 10
-    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
     CR=$?
     if [ ${CR} -ne 0 ]
     then 
-        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh stop [KO]"
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh stop [KO]"
         return 1
     fi
     return 0
@@ -535,7 +540,7 @@ function stopCluster {
 
 function formatCluster {
     #delete data for all nodes (without deleting folder)
-    Vl_tmpListContainer="createCluster_list_container.tmp"
+    Vl_tmpListContainer="${Vg_dirTmp}/createCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
     rm -f ${Vl_tmpListContainer}
@@ -552,24 +557,25 @@ function formatCluster {
     do
         #create data folder
         logMessage "INF" "delete files from ${Vg_dirData}/${tmpNode}"
-        rm -f ${Vl_dirData}/logs/*
-        rm -f ${Vl_dirData}/nameNode/*
-        rm -f ${Vl_dirData}/dataNode/*
-        rm -f ${Vl_dirData}/namesecondary/*
-        rm -f ${Vl_dirData}/tmp/*
+        rm -rf ${Vg_dirData}/${tmpNode}/logs/*
+        rm -rf ${Vg_dirData}/${tmpNode}/nameNode/*
+        rm -rf ${Vg_dirData}/${tmpNode}/dataNode/*
+        rm -rf ${Vg_dirData}/${tmpNode}/namesecondary/*
+        rm -rf ${Vg_dirData}/${tmpNode}/tmp/*
     done    
+
     rm -f ${Vl_tmpListContainer}
 
 
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh format"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 2
-    checkFinDockerExec "${tmpNode}" "manageDockerCluster.sh"
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
     CR=$?
     if [ ${CR} -ne 0 ]
     then 
-        logMessage "ERR" "${tmpNode} : /home/hadoop/manageDockerCluster.sh format [KO]"
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh format [KO]"
         return 1
     fi
 }
@@ -578,7 +584,6 @@ function formatCluster {
 
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
-  echo ""
   echo "Hadoop info @ nodemaster : http://${masterIp}:8088/cluster"
   echo "DFS Health  @ nodemaster : http://${masterIp}:9870/dfshealth.html"
   echo "Spark info  @ nodemaster : http://${masterIp}:8080"
@@ -607,8 +612,6 @@ then
     usage
     exit 1
 fi
-
-echo 
 
 echo `date '+%Y-%m-%d %H:%M:%S'`" - Start (param=${Vg_Param})"
 

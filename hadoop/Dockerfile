@@ -9,7 +9,7 @@ MAINTAINER pragmatias
 #Configuration package hadoop
 ENV HADOOP_PKG hadoop-3.2.0
 ENV SCALA_PKG scala-2.12.8
-ENV SPARK_PKG spark-2.4.0-bin-hadoop2.7
+ENV SPARK_PKG spark-2.4.0-bin-without-hadoop
 
 #Configuration des variables d'environnement
 ENV JAVA_HOME /usr/lib/jvm/java/jre

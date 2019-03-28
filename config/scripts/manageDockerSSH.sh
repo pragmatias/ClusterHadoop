@@ -15,7 +15,7 @@ if [ "$1" = "get_ssh" ]
 then
     echo 'Y' | ssh-keygen -b 4096 -t rsa -N '' -f /home/hadoop/.ssh/id_rsa  >> ${Vl_log} 2>&1
     if [ ${?} -ne 0 ]; then echo "1" > ${Vl_nomfichierCR} ; exit 1 ; fi
-    cat /home/hadoop/.ssh/id_rsa.pub >> ${Vl_RepTmp}/authorized_keys  >> ${Vl_log} 2>&1
+    cat /home/hadoop/.ssh/id_rsa.pub >> ${Vl_RepTmp}/authorized_keys
 	if [ ${?} -ne 0 ]; then echo "1" > ${Vl_nomfichierCR} ; exit 1 ; fi
     echo "0" > ${Vl_nomfichierCR}
 
@@ -29,7 +29,7 @@ then
 
 elif [ "$1" = "get_host" ]
 then
-    ssh-keyscan $2 | grep -v "^#" >> ${Vl_RepTmp}/known_hosts  >> ${Vl_log} 2>&1
+    ssh-keyscan $2 | grep -v "^#" >> ${Vl_RepTmp}/known_hosts
     if [ ${?} -ne 0 ]; then echo "1" > ${Vl_nomfichierCR} ; exit 1 ; fi
     echo "0" > ${Vl_nomfichierCR}
 
