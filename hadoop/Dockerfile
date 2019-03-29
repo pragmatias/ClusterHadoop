@@ -3,8 +3,8 @@ FROM centos:7
 MAINTAINER pragmatias
 
 #Configuration du proxy
-#ENV http_proxy http://usr:pwd@192.168.77.12:8080
-#ENV https_proxy http:/usr:pwd@192.168.77.12:8080
+#ENV http_proxy http://usr:pwd@ip:port
+#ENV https_proxy http:/usr:pwd@ip:port
 
 #Configuration package hadoop
 ENV HADOOP_PKG hadoop-3.2.0
@@ -115,6 +115,10 @@ RUN echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/ha
 #Copie des fichiers de configuration hadoop
 COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml config/hadoop/mapred-site.xml config/hadoop/yarn-site.xml /home/hadoop/hadoop/etc/hadoop/
 
+#Copie des fichiers de configuration pour Spark
+COPY --chown=hadoop config/hadoop/spark-defaults.conf /home/hadoop/spark/conf/
+
+
 #Root
 USER root
 
@@ -130,7 +134,7 @@ EXPOSE 8088 8042
 #Datanode UI
 EXPOSE 9864 9865 9866 9867 9000
 #Spark
-EXPOSE 7077
+EXPOSE 7077 18080
 
 #Execution du service SSH 
 CMD ["/usr/sbin/sshd", "-D"]
