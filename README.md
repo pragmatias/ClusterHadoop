@@ -6,21 +6,35 @@ Here, you will find some scripts and config files to create a small cluster with
 
 - [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on MasterNode
 - [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on SlaveNode
-- [ ] Add Spark node in the cluster (container + node)
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
 - [ ] Hadoop configuration files modification to use less memory
 - [ ] Add information about testing hdfs
 - [ ] Add information about testing yarn
 - [ ] Add information about testing spark
 
-
 <h2 align="center">Scripts</h2>
 
-- The main script is `manageCluster.sh`
-- To build the centos container `./manageCluster.sh build`
-- To deploy the cluster `./manageCluster.sh deploy`
-- To destroy the cluster `./manageCluster.sh destroy`
-- To configure the cluster (ssh & hosts) `./manageCluster.sh config`
+### Prerequisite
+
+Create the following folder :
+- data : used to store persisten data from the cluster (mapping volume)
+- package : used to store hadoop/spark/scala/.. archive to build the docker image
+- tmp : used to store the temporary files
+
+
+### Main script : manageCluster.sh
+
+- To build the centos container : `./manageCluster.sh build`
+- To deploy the cluster : `./manageCluster.sh deploy`
+- To destroy the cluster : `./manageCluster.sh destroy`
+- To configure the cluster (ssh & hosts) : `./manageCluster.sh config`
+- To format hdfs namenode : `./manageCluster.sh format_hadoop`
+- To start hdfs & yarn services : `./manageCluster.sh start_hadoop`
+- To start spark & history server services : `./manageCluster.sh start_spark`
+- To stop spark & history server services : `./manageCluster.sh stop_spark`
+- To stop hdfs & yarn services : `./manageCluster.sh stop_hadoop`
+- To stop all the docker container : `./manageCluster.sh stop_container`
+- To start all the docker container : `./manageCluster.sh start_container`
 
 
 <h2 align="center">Docker Tips</h2>
@@ -31,6 +45,7 @@ Here, you will find some scripts and config files to create a small cluster with
 - To kill a container : `docker kill <container_name>`
 - To remove a container : `docker rm <container_name>`
 - To list the container : `docker ps -a`
+- To list the image : `docker image ls`
 - To list the network : `docker network list`
 
 
@@ -51,7 +66,7 @@ Here, you will find some scripts and config files to create a small cluster with
  3. Restart docker service : `sudo systemctl restart docker`
 
 
-<h2 align="center">Testing</h2>
+<h2 align="center">Cluster checking</h2>
 
 ### HDFS
  1. Connection to masternode : `docker exec -u hadoop -it nodemaster bash`
@@ -65,8 +80,19 @@ Here, you will find some scripts and config files to create a small cluster with
 
 ### Spark
  1. Connection to masternode : `docker exec -u hadoop -it nodemaster bash`
- 2. Execute the spark shell : `spark-shell --master yarn`
- 3. Check the spark version : `sc.version`
+ 2. Execute the spark shell : `spark-shell --master yarn --num-executors 1 --executor-memory 512m`
+ 3. Check the spark version (in the shell) : `sc.version`
+ 4. Get inputfile (in the shell): `val inputfile = sc.textFile("test/sample.txt")`
+ 5. Get count (in the shell) : `val counts = inputfile.flatMap(line => line.split(" ")).map(word => (word,1)).reduceByKey(_+_)`
+ 6. Store result (in the shell) : `counts.saveAsTextFile("output")`
+ 7. Check on hdfs if the file is stored : `hdfs dfs -ls output/*` and `hdfs dfs -cat output/part*`
+ 8. Execute a calcul with client mode : `spark-submit --deploy-mode client \
+               --class org.apache.spark.examples.SparkPi \
+               $SPARK_HOME/examples/jars/spark-examples_2.11-2.4.0.jar 10`
+ 9. Execute a calcul with cluster mode : `spark-submit --deploy-mode cluster \
+               --class org.apache.spark.examples.SparkPi \
+               $SPARK_HOME/examples/jars/spark-examples_2.11-2.4.0.jar 10`
+
 
 
 <h2 align="center">Info</h2>

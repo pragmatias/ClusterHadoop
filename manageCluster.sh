@@ -504,41 +504,106 @@ function configCluster {
 }
 
 
+function startContainer {
 
+    logMessage "INF" "Start startContainer"
 
-function startCluster {
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
-    CR=$?
-    if [ ${CR} -ne 0 ]
+    Vl_tmpListContainer="${Vg_dirTmp}/startContainer_list_container.tmp"
+    
+    # Get the potentiel list of image to stop
+    rm -f ${Vl_tmpListContainer}
+    
+    echo ${Vg_nameMasterNode} > ${Vl_tmpListContainer}
+
+    if [ -e ${Vg_configFileSlaves} ]
     then 
-        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh start [KO]"
-        return 1
+        cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
     fi
+    
+    logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
+    
+    
+
+
+    #execution on the list of node
+    for tmpNode in `cat ${Vl_tmpListContainer}`
+    do
+        Vl_isPaused=`docker ps -a --filter "name=${tmpNode}" --filter "status=paused" -q | wc -l`
+        if [ ${Vl_isPaused} -eq 1 ]
+        then
+            #start container
+            Vl_cmd="docker start ${tmpNode}"
+            logMessage "INF" "${Vl_cmd}"
+            ${Vl_cmd}
+            CR=$?
+            if [ ${CR} -ne 0 ]
+            then 
+                logMessage "ERR" "Container ${tmpNode} not started"
+                return 1
+            fi
+        fi
+    done
+    
+    #delete temporary files
+    rm -f ${Vl_tmpListContainer}
+    
+    
+    logMessage "INF" "End startContainer"
     return 0
 }
 
 
-function stopCluster {
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop"
-    logMessage "INF" "${Vl_cmd}"
-    ${Vl_cmd}
-    sleep 5
-    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
-    CR=$?
-    if [ ${CR} -ne 0 ]
+function stopContainer {
+
+    logMessage "INF" "Start stopContainer"
+
+    Vl_tmpListContainer="${Vg_dirTmp}/stopContainer_list_container.tmp"
+    
+    # Get the potentiel list of image to stop
+    rm -f ${Vl_tmpListContainer}
+    
+    echo ${Vg_nameMasterNode} > ${Vl_tmpListContainer}
+
+    if [ -e ${Vg_configFileSlaves} ]
     then 
-        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh stop [KO]"
-        return 1
+        cat ${Vg_configFileSlaves} >> ${Vl_tmpListContainer}
     fi
+    
+    logMessage "INF" "Number of node : `cat ${Vl_tmpListContainer} | wc -l`"
+    
+    
+
+
+    #execution on the list of node
+    for tmpNode in `cat ${Vl_tmpListContainer}`
+    do
+        
+        Vl_isRunning=`docker ps -a --filter "name=${tmpNode}" --filter "status=running" -q | wc -l`
+        if [ ${Vl_isRunning} -eq 1 ]
+        then
+            #stop container
+            Vl_cmd="docker stop ${tmpNode}"
+            logMessage "INF" "${Vl_cmd}"
+            ${Vl_cmd}
+            CR=$?
+            if [ ${CR} -ne 0 ]
+            then 
+                logMessage "ERR" "Container ${tmpNode} not stopped"
+                return 1
+            fi
+        fi
+    done
+    
+    #delete temporary files
+    rm -f ${Vl_tmpListContainer}
+    
+    
+    logMessage "INF" "End stopContainer"
     return 0
 }
 
 
-function formatCluster {
+function formatClusterHadoop {
     #delete data for all nodes (without deleting folder)
     Vl_tmpListContainer="${Vg_dirTmp}/createCluster_list_container.tmp"
     
@@ -567,7 +632,7 @@ function formatCluster {
     rm -f ${Vl_tmpListContainer}
 
 
-    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh format"
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh format_hadoop"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
     sleep 5
@@ -575,37 +640,106 @@ function formatCluster {
     CR=$?
     if [ ${CR} -ne 0 ]
     then 
-        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh format [KO]"
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh format_hadoop [KO]"
         return 1
     fi
+}
+
+
+function startClusterHadoop {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start_hadoop"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh start_hadoop [KO]"
+        return 1
+    fi
+    return 0
+}
+
+
+function stopClusterHadoop {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop_hadoop "
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh stop_hadoop [KO]"
+        return 1
+    fi
+    return 0
+}
+
+
+function startClusterSpark {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start_spark"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh start_spark [KO]"
+        return 1
+    fi
+    return 0
+}
+
+
+function stopClusterSpark {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop_spark"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 5
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh stop_spark [KO]"
+        return 1
+    fi
+    return 0
 }
 
 
 
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
-  echo "Hadoop info @ nodemaster : http://${masterIp}:8088/cluster"
-  echo "DFS Health  @ nodemaster : http://${masterIp}:9870/dfshealth.html"
-  echo "Spark info  @ nodemaster : http://${masterIp}:8080"
-  echo "Container   @ nodemaster : docker exec -u hadoop -it nodemaster bash"
+  echo "Hadoop cluster info  @ nodemaster : http://${masterIp}:8088/cluster"
+  echo "DFS Health           @ nodemaster : http://${masterIp}:9870/dfshealth.html"
+  echo "Spark info           @ nodemaster : http://${masterIp}:8080"
+  echo "History (Spark) info @ nodemaster : http://${masterIp}:18080"
+  echo "Container access     @ nodemaster : docker exec -u hadoop -it nodemaster bash"
 }
 
 function usage {
-    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop]"
+    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark]"
     echo "list of options :"
     echo "     - build : build the docker image"
     echo "     - deploy : deploy the docker container"
     echo "     - config : configure the container (ssh & more)"
     echo "     - info : give information about webbapps (cluster webUI)"
+    echo "     - format_hadoop : format namenode (hadoop)"
     echo "     - start_hadoop : start dfs & yarn services (hadoop)"
     echo "     - stop_hadoop : stop dfs & yarn services (hadoop)"
-    echo "     - format_hadoop : format namenode (hadoop)"
+    echo "     - start_spark : start spark & history server services (spark)"
+    echo "     - stop_spark : stop spark & history server services (spark)"
+    echo "     - start_container : start all docker container (cluster)"
+    echo "     - stop_container : stop all docker container (cluster)"
 }
 
 Vg_Param=$1
 CR=0
 
-Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|" | grep "|${Vg_Param}|" | wc -l)
+Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark|start_container|stop_container|" | grep "|${Vg_Param}|" | wc -l)
 
 if [ ${Vg_TestArgs} -eq 0 ]
 then 
@@ -657,25 +791,55 @@ then
     CR=$?
 fi
 
+
+
+if [ "${Vg_Param}" = "start_container" -a ${CR} -eq 0 ]
+then
+    startContainer
+    CR=$?
+fi
+
+if [ "${Vg_Param}" = "stop_container" -a ${CR} -eq 0 ]
+then
+    stopContainer
+    CR=$?
+fi
+
+
+
+
+if [ "${Vg_Param}" = "format_hadoop" -a ${CR} -eq 0 ]
+then
+    formatClusterHadoop
+    CR=$?
+fi
+
 if [ "${Vg_Param}" = "start_hadoop" -a ${CR} -eq 0 ]
 then
-    startCluster
+    startClusterHadoop
     CR=$?
     showInfo
 fi
 
 if [ "${Vg_Param}" = "stop_hadoop" -a ${CR} -eq 0 ]
 then
-    stopCluster
+    stopClusterHadoop
     CR=$?
 fi
 
-
-if [ "${Vg_Param}" = "format_hadoop" -a ${CR} -eq 0 ]
+if [ "${Vg_Param}" = "start_spark" -a ${CR} -eq 0 ]
 then
-    formatCluster
+    startClusterSpark
+    CR=$?
+    showInfo
+fi
+
+if [ "${Vg_Param}" = "stop_spark" -a ${CR} -eq 0 ]
+then
+    stopClusterSpark
     CR=$?
 fi
+
 
 
 if [ ${CR} -eq 0 ]
