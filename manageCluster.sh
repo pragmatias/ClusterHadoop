@@ -55,7 +55,7 @@ function buildCluster {
     if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.0.tar.gz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget http://mirrors.ircam.fr/pub/apache/hadoop/common/stable/hadoop-3.2.0.tar.gz"
+        Vl_cmd="wget http://apache.mirrors.ovh.net/ftp.apache.org/dist/hadoop/common/hadoop-3.2.0/hadoop-3.2.0.tar.gz"
         logMessage "INF" "Get Hadoop archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -68,10 +68,10 @@ function buildCluster {
         cd -
     fi
 
-    if [ ! -e "${Vg_dirRoot}/package/scala-2.12.8.tgz" ]
+    if [ ! -e "${Vg_dirRoot}/package/scala-2.13.0.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget https://downloads.lightbend.com/scala/2.12.8/scala-2.12.8.tgz"
+        Vl_cmd="wget https://downloads.lightbend.com/scala/2.13.0/scala-2.13.0.tgz"
         logMessage "INF" "Get Scala archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -84,10 +84,10 @@ function buildCluster {
         cd -
     fi
 
-    if [ ! -e "${Vg_dirRoot}/package/spark-2.4.0-bin-without-hadoop.tgz" ]
+    if [ ! -e "${Vg_dirRoot}/package/spark-2.4.3-bin-without-hadoop.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget https://archive.apache.org/dist/spark/spark-2.4.0/spark-2.4.0-bin-without-hadoop.tgz"
+        Vl_cmd="wget https://archive.apache.org/dist/spark/spark-2.4.3/spark-2.4.3-bin-without-hadoop.tgz"
         logMessage "INF" "Get Spark archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -233,7 +233,8 @@ function createNetwork {
 function createCluster {
 
     logMessage "INF" "Start createCluster"
-
+    
+    mkdir -p ${Vg_dirTmp}
     Vl_tmpListContainer="${Vg_dirTmp}/createCluster_list_container.tmp"
     
     # Get the potentiel list of image to stop
@@ -682,7 +683,7 @@ function startClusterSpark {
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start_spark"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 5
+    sleep 10
     checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
     CR=$?
     if [ ${CR} -ne 0 ]
@@ -698,7 +699,7 @@ function stopClusterSpark {
     Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop_spark"
     logMessage "INF" "${Vl_cmd}"
     ${Vl_cmd}
-    sleep 5
+    sleep 10
     checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
     CR=$?
     if [ ${CR} -ne 0 ]

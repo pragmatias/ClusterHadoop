@@ -1,4 +1,5 @@
 #!/bin/bash
+. ~/.profile
 
 # Manage ssh
 Vl_hostname=${HOSTNAME}

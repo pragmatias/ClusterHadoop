@@ -1,4 +1,5 @@
 #!/bin/bash
+. ~/.profile
 
 # Manage ssh
 Vl_hostname=${HOSTNAME}
@@ -140,20 +141,25 @@ elif [ "$1" = "stop_spark" ]
 then
 
 
-    /home/hadoop/spark/sbin/stop-history-server.sh >> ${Vl_log} 2>&1
-    if [ ${?} -ne 0 ]
-    then 
-        echo "1" > ${Vl_nomfichierCR}
-        exit 1
-    fi
 
-    #check spark master service
-    Vl_testOK=`/usr/bin/jps | grep "\sHistoryServer" | wc -l`
-    if [ ${Vl_testOK} -gt 0 ]
+    Vl_testJump=`/usr/bin/jps | grep "\sHistoryServer" | wc -l`
+    if [ ${Vl_testJump} -gt 0 ]
     then
-        echo "Find HistoryServer with /usr/bin/jps" >> ${Vl_log} 2>&1
-        echo "1" > ${Vl_nomfichierCR}
-        exit 1
+        /home/hadoop/spark/sbin/stop-history-server.sh >> ${Vl_log} 2>&1
+        if [ ${?} -ne 0 ]
+        then 
+            echo "1" > ${Vl_nomfichierCR}
+            exit 1
+        fi
+
+        #check spark master service
+        Vl_testOK=`/usr/bin/jps | grep "\sHistoryServer" | wc -l`
+        if [ ${Vl_testOK} -gt 0 ]
+        then
+            echo "Find HistoryServer with /usr/bin/jps" >> ${Vl_log} 2>&1
+            echo "1" > ${Vl_nomfichierCR}
+            exit 1
+        fi
     fi
 
 

@@ -3,13 +3,13 @@ FROM centos:7
 MAINTAINER pragmatias
 
 #Configuration du proxy
-#ENV http_proxy http://usr:pwd@ip:port
-#ENV https_proxy http:/usr:pwd@ip:port
+#ENV http_proxy http://user:password@ip:port
+#ENV https_proxy http://user:password@ip:port
 
 #Configuration package hadoop
 ENV HADOOP_PKG hadoop-3.2.0
-ENV SCALA_PKG scala-2.12.8
-ENV SPARK_PKG spark-2.4.0-bin-without-hadoop
+ENV SCALA_PKG scala-2.13.0
+ENV SPARK_PKG spark-2.4.3-bin-without-hadoop
 
 #Configuration des variables d'environnement
 ENV JAVA_HOME /usr/lib/jvm/java/jre
@@ -93,8 +93,9 @@ RUN mkdir -p /home/hadoop/hadoop/logs \
 
 #Gestion de l'environnement
 RUN echo "export PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:/home/hadoop/spark/bin:/home/hadoop/spark/sbin:\$PATH" >> /home/hadoop/.profile
-RUN echo "PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:/home/hadoop/spark/bin:/home/hadoop/spark/sbin:\$PATH" >> /home/hadoop/.bashrc
+RUN echo "export PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:/home/hadoop/spark/bin:/home/hadoop/spark/sbin:\$PATH" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.bashrc
+RUN echo "export HADOOP_HOME=/home/hadoop/hadoop" >> /home/hadoop/.profile
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.bashrc
 RUN echo "export HADOOP_CONF_DIR=/home/hadoop/hadoop/etc/hadoop" >> /home/hadoop/.profile
 RUN echo "export SPARK_DIST_CLASSPATH=\$(hadoop classpath)" >> /home/hadoop/.bashrc
