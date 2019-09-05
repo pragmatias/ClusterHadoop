@@ -17,7 +17,7 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-    
+
   <property>
     <name>yarn.app.mapreduce.am.env</name>
     <value>HADOOP_MAPRED_HOME=/home/hadoop/hadoop</value>
@@ -30,21 +30,21 @@
     <name>mapreduce.reduce.env</name>
     <value>HADOOP_MAPRED_HOME=/home/hadoop/hadoop</value>
   </property>
-    
-  
+
+
   <property>
     <name>mapreduce.framework.name</name>
     <value>yarn</value>
-  </property>     
+  </property>
   <property>
     <name>mapreduce.job.tracker</name>
     <value>nodemaster:9001</value>
-  </property>  
+  </property>
 
   <property>
     <name>mapreduce.map.memory.mb</name>
     <value>256</value>
-  </property>  
+  </property>
   <property>
     <name>mapreduce.map.java.opts</name>
     <value>-Xmx256m</value>
@@ -58,7 +58,7 @@
   <property>
     <name>mapreduce.reduce.memory.mb</name>
     <value>256</value>
-  </property>  
+  </property>
   <property>
     <name>mapreduce.reduce.java.opts</name>
     <value>-Xmx200m</value>
@@ -67,19 +67,19 @@
     <name>mapreduce.reduce.cpu.vcores</name>
     <value>1</value>
   </property>
-  
-  
+
+
   <property>
     <name>yarn.app.mapreduce.am.resource.mb</name>
     <value>256</value>
-  </property>  
+  </property>
   <property>
     <name>yarn.app.mapreduce.am.command-opts</name>
     <value>-Xmx200m</value>
   </property>
   <property>
     <name>yarn.app.mapreduce.am.resource.cpu-vcores</name>
-    <value>1</value>
+    <value>2</value>
   </property>
-  
+
 </configuration>
