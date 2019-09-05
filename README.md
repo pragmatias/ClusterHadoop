@@ -86,8 +86,8 @@ Create the following folder :
  5. Get count (in the shell) : `val counts = inputfile.flatMap(line => line.split(" ")).map(word => (word,1)).reduceByKey(_+_)`
  6. Store result (in the shell) : `counts.saveAsTextFile("output")`
  7. Check on hdfs if the file is stored : `hdfs dfs -ls output/*` and `hdfs dfs -cat output/part*`
- 8. Execute a calcul with client mode : `spark-submit --deploy-mode client --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.0.jar 10`
- 9. Execute a calcul with cluster mode : `spark-submit --deploy-mode cluster --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.0.jar 10`
+ 8. Execute a calcul with client mode : `spark-submit --deploy-mode client --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.3.jar 10`
+ 9. Execute a calcul with cluster mode : `spark-submit --deploy-mode cluster --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.3.jar 10`
 
 
 
