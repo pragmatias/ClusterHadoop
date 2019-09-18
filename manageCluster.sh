@@ -100,7 +100,23 @@ function buildCluster {
         cd -
     fi
 
-
+    if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.1-bin-netinst.tgz" ]
+    #if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.1-bin-all.tgz" ]
+    then
+        cd ${Vg_dirRoot}/package
+        Vl_cmd="wget http://apache.mirrors.benatherton.com/zeppelin/zeppelin-0.8.1/zeppelin-0.8.1-bin-netinst.tgz"
+        #Vl_cmd="wget http://mirrors.standaloneinstaller.com/apache/zeppelin/zeppelin-0.8.1/zeppelin-0.8.1-bin-all.tgz"
+        logMessage "INF" "Get Zeppelin archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
+        ${Vl_cmd}
+        CR=$?
+        if [ ${CR} -ne 0 ]
+        then
+            logMessage "ERR" "Get Zeppelin archive [${CR}]"
+            cd -
+            return 1
+        fi
+        cd -
+    fi
 
 
     Vl_cmd="docker build . -t ${Vg_nameDockerImage} -f ${Vg_dirDockerImage}/${Vg_nameDockerFile}"
@@ -259,11 +275,11 @@ function createCluster {
         #create data folder
         logMessage "INF" "Create the folder (data)"
         Vl_dirData="${Vg_dirData}/${tmpNode}"
-        mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp
+        mkdir -p ${Vl_dirData}/logs ${Vl_dirData}/nameNode ${Vl_dirData}/dataNode ${Vl_dirData}/namesecondary ${Vl_dirData}/tmp ${Vg_dirData}/notebook
 
         #create container
         mkdir -p ${Vg_dirTmp}
-        Vl_cmd="docker run -Pd -v ${Vg_dirTmp}:${Vg_dirDockerTmp} -v ${Vg_dirConfig}:${Vg_dirDockerConfig} -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
+        Vl_cmd="docker run -Pd -v ${Vg_dirTmp}:${Vg_dirDockerTmp} -v ${Vg_dirConfig}:${Vg_dirDockerConfig} -v ${Vl_dirData}/logs:/home/hadoop/data/logs -v ${Vl_dirData}/nameNode:/home/hadoop/data/nameNode -v ${Vl_dirData}/dataNode:/home/hadoop/data/dataNode -v ${Vl_dirData}/namesecondary:/home/hadoop/data/namesecondary -v ${Vl_dirData}/tmp:/home/hadoop/data/tmp -v ${Vg_dirData}/notebook:/home/hadoop/data/notebook --network ${Vg_nameNetwork} --name ${tmpNode} -it -h ${tmpNode} ${Vg_nameDockerImage}"
         logMessage "INF" "${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -712,35 +728,76 @@ function stopClusterSpark {
 
 
 
+function startZeppelin {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh start_zeppelin"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 10
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh start_zeppelin [KO]"
+        return 1
+    fi
+    return 0
+}
+
+
+function stopZeppelin {
+    Vl_cmd="docker exec -u hadoop -d nodemaster /home/hadoop/manageDockerCluster.sh stop_zeppelin"
+    logMessage "INF" "${Vl_cmd}"
+    ${Vl_cmd}
+    sleep 10
+    checkFinDockerExec "nodemaster" "manageDockerCluster.sh"
+    CR=$?
+    if [ ${CR} -ne 0 ]
+    then 
+        logMessage "ERR" "nodemaster : /home/hadoop/manageDockerCluster.sh stop_zeppelin [KO]"
+        return 1
+    fi
+    return 0
+}
+
+
+
+
+
 function showInfo {
   masterIp=`docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${Vg_nameMasterNode}`
   echo "Hadoop cluster info  @ nodemaster : http://${masterIp}:8088/cluster"
   echo "DFS Health           @ nodemaster : http://${masterIp}:9870/dfshealth.html"
   echo "Spark info           @ nodemaster : http://${masterIp}:8080"
   echo "History (Spark) info @ nodemaster : http://${masterIp}:18080"
+  echo "Zeppelin info        @ nodemaster : http://${masterIp}:8081"
   echo "Container access     @ nodemaster : docker exec -u hadoop -it nodemaster bash"
 }
 
+
+
 function usage {
-    echo "command : ${0} [build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark]"
+    echo "command : ${0} [build|deploy|destroy|config|info|start_all|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark|start_zeppelin|stop_zeppelin]"
     echo "list of options :"
     echo "     - build : build the docker image"
     echo "     - deploy : deploy the docker container"
     echo "     - config : configure the container (ssh & more)"
     echo "     - info : give information about webbapps (cluster webUI)"
     echo "     - format_hadoop : format namenode (hadoop)"
+    echo "     - start_all : execute start_hadoop, start_spark, start_zeppelin"
     echo "     - start_hadoop : start dfs & yarn services (hadoop)"
     echo "     - stop_hadoop : stop dfs & yarn services (hadoop)"
     echo "     - start_spark : start spark & history server services (spark)"
     echo "     - stop_spark : stop spark & history server services (spark)"
     echo "     - start_container : start all docker container (cluster)"
     echo "     - stop_container : stop all docker container (cluster)"
+    echo "     - start_zeppelin : start zeppelin deamon"
+    echo "     - stop_zeppelin : stop zeppelin deamon"
 }
 
 Vg_Param=$1
 CR=0
 
-Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark|start_container|stop_container|" | grep "|${Vg_Param}|" | wc -l)
+Vg_TestArgs=$(echo "|build|deploy|destroy|config|info|start_all|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark|start_container|stop_container|start_zeppelin|stop_zeppelin|" | grep "|${Vg_Param}|" | wc -l)
 
 if [ ${Vg_TestArgs} -eq 0 ]
 then 
@@ -840,6 +897,45 @@ then
     stopClusterSpark
     CR=$?
 fi
+
+
+
+if [ "${Vg_Param}" = "start_zeppelin" -a ${CR} -eq 0 ]
+then
+    startZeppelin
+    CR=$?
+    showInfo
+fi
+
+if [ "${Vg_Param}" = "stop_zeppelin" -a ${CR} -eq 0 ]
+then
+    stopZeppelin
+    CR=$?
+fi
+
+
+
+
+if [ "${Vg_Param}" = "start_all" -a ${CR} -eq 0 ]
+then
+    startClusterHadoop
+    CR=$?
+    if [ ${CR} -eq 0 ]
+    then
+        startClusterSpark
+        CR=$?
+    fi
+    if [ ${CR} -eq 0 ]
+    then
+        startZeppelin
+        CR=$?
+    fi
+    if [ ${CR} -eq 0 ]
+    then
+        showInfo
+    fi
+fi
+
 
 
 

@@ -177,7 +177,6 @@ then
         exit 1
     fi
 
-
     #check spark master service
     Vl_testOK=`/usr/bin/jps | grep "\sMaster" | wc -l`
     if [ ${Vl_testOK} -gt 0 ]
@@ -189,7 +188,38 @@ then
 
     echo "0" > ${Vl_nomfichierCR}
 
+elif [ "$1" = "start_zeppelin" ]
+then
+    /home/hadoop/zeppelin/bin/zeppelin-daemon.sh start >> ${Vl_log} 2>&1
+    if [ ${?} -ne 0 ]; then echo "1" > ${Vl_nomfichierCR} ; exit 1 ; fi
+    
+    #check zeppelin service
+    Vl_testOK=`/usr/bin/jps | grep "\sZeppelinServer" | wc -l`
+    if [ ${Vl_testOK} -ne 1 ]
+    then
+        echo "Dont find ZeppelinServer with /usr/bin/jps" >> ${Vl_log} 2>&1
+        echo "1" > ${Vl_nomfichierCR}
+        exit 1
+    fi
 
+    echo "0" > ${Vl_nomfichierCR}    
+    
+elif [ "$1" = "stop_zeppelin" ]
+then
+    /home/hadoop/zeppelin/bin/zeppelin-daemon.sh stop >> ${Vl_log} 2>&1
+    if [ ${?} -ne 0 ]; then echo "1" > ${Vl_nomfichierCR} ; exit 1 ; fi
+    
+    #check zeppelin service
+    Vl_testOK=`/usr/bin/jps | grep "\sZeppelinServer" | wc -l`
+    if [ ${Vl_testOK} -gt 0 ]
+    then
+        echo "Find ZeppelinServer with /usr/bin/jps" >> ${Vl_log} 2>&1
+        echo "1" > ${Vl_nomfichierCR}
+        exit 1
+    fi
+    
+    echo "0" > ${Vl_nomfichierCR}
+    
 elif [ "$1" = "format_hadoop" ]
 then
     /home/hadoop/hadoop/bin/hdfs namenode -format >> ${Vl_log} 2>&1
