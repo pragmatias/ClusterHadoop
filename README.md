@@ -64,6 +64,7 @@ Create the following folder :
 
 
 <h2 align="center">Deploy full cluster</h2>
+
  1. Go to the foder "clusterhadoop"
  2. Build the docker image : `./manageCluster.sh build`
  3. Deploy the docker image : `./manageCluster.sh deploy`
