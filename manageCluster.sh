@@ -776,7 +776,7 @@ function showInfo {
 
 
 function usage {
-    echo "command : ${0} [build|deploy|destroy|config|info|start_all|start_hadoop|stop_hadoop|format_hadoop|start_spark|stop_spark|start_zeppelin|stop_zeppelin]"
+    echo "command : ${0} [option]"
     echo "list of options :"
     echo "     - build : build the docker image"
     echo "     - deploy : deploy the docker container"
