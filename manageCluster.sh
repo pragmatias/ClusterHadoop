@@ -52,10 +52,10 @@ function buildCluster {
     logMessage "INF" "Start buildCluster"
 
     mkdir -p ${Vg_dirRoot}/package
-    if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.0.tar.gz" ]
+    if [ ! -e "${Vg_dirRoot}/package/hadoop-3.2.1.tar.gz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget http://apache.mirrors.ovh.net/ftp.apache.org/dist/hadoop/common/hadoop-3.2.0/hadoop-3.2.0.tar.gz"
+        Vl_cmd="wget http://apache.mirrors.ovh.net/ftp.apache.org/dist/hadoop/common/stable/hadoop-3.2.1.tar.gz"
         logMessage "INF" "Get Hadoop archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
