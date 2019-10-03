@@ -158,7 +158,7 @@
         },
         "master": {
           "name": "master",
-          "value": "spark://nodemaster:7077",
+          "value": "yarn-client",
           "type": "string"
         },
         "zeppelin.pyspark.python": {

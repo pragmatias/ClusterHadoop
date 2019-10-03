@@ -3,15 +3,15 @@ FROM centos:7
 MAINTAINER pragmatias
 
 #Configuration du proxy
-#ENV http_proxy http://usr:pwd@ip:port
-#ENV https_proxy http://usr:pwd@ip:port
+#ENV http_proxy http://user:pwd@ip:port
+#ENV https_proxy http://user:pwd@ip:port
 
 #Configuration package hadoop
 ENV HADOOP_PKG hadoop-3.2.1
-ENV SCALA_PKG scala-2.13.0
+ENV SCALA_PKG scala-2.11.12
 ENV SPARK_PKG spark-2.4.3-bin-without-hadoop
-ENV ZEPLN_PKG zeppelin-0.8.1-bin-netinst
-#ENV ZEPLN_PKG zeppelin-0.8.1-bin-all
+ENV ZEPLN_PKG zeppelin-0.8.2-bin-netinst
+#ENV ZEPLN_PKG zeppelin-0.8.2-bin-all
 
 
 #Configuration des variables d'environnement

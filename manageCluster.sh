@@ -68,10 +68,10 @@ function buildCluster {
         cd -
     fi
 
-    if [ ! -e "${Vg_dirRoot}/package/scala-2.13.0.tgz" ]
+    if [ ! -e "${Vg_dirRoot}/package/scala-2.11.12.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget https://downloads.lightbend.com/scala/2.13.0/scala-2.13.0.tgz"
+        Vl_cmd="wget https://downloads.lightbend.com/scala/2.11.12/scala-2.11.12.tgz"
         logMessage "INF" "Get Scala archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
@@ -100,12 +100,12 @@ function buildCluster {
         cd -
     fi
 
-    if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.1-bin-netinst.tgz" ]
-    #if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.1-bin-all.tgz" ]
+    if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.2-bin-netinst.tgz" ]
+    #if [ ! -e "${Vg_dirRoot}/package/zeppelin-0.8.2-bin-all.tgz" ]
     then
         cd ${Vg_dirRoot}/package
-        Vl_cmd="wget http://apache.mirrors.benatherton.com/zeppelin/zeppelin-0.8.1/zeppelin-0.8.1-bin-netinst.tgz"
-        #Vl_cmd="wget http://mirrors.standaloneinstaller.com/apache/zeppelin/zeppelin-0.8.1/zeppelin-0.8.1-bin-all.tgz"
+        Vl_cmd="wget http://apache.mirrors.benatherton.com/zeppelin/zeppelin-0.8.2/zeppelin-0.8.2-bin-netinst.tgz"
+        #Vl_cmd="wget http://mirrors.standaloneinstaller.com/apache/zeppelin/zeppelin-0.8.2/zeppelin-0.8.2-bin-all.tgz"
         logMessage "INF" "Get Zeppelin archive [${Vg_dirRoot}/package] : ${Vl_cmd}"
         ${Vl_cmd}
         CR=$?
