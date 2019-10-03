@@ -111,6 +111,13 @@ sc
 - Alpine Java don't work with hadoop cluster (java issues / musl instead of glibc)
 
 
+### Software
+
+- [Hadoop](https://hadoop.apache.org/releases.html)
+- [Scala](https://www.scala-lang.org/download/)
+- [Spark](https://spark.apache.org)
+- [Zeppelin](http://zeppelin.apache.org)
+
 
 <h2 align="center">Spark</h2>
 
