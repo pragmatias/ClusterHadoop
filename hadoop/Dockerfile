@@ -3,13 +3,16 @@ FROM centos:7
 MAINTAINER pragmatias
 
 #Configuration du proxy
-#ENV http_proxy http://user:password@ip:port
-#ENV https_proxy http://user:password@ip:port
+#ENV http_proxy http://user:pwd@ip:port
+#ENV https_proxy http://user:pwd@ip:port
 
 #Configuration package hadoop
-ENV HADOOP_PKG hadoop-3.2.0
-ENV SCALA_PKG scala-2.13.0
+ENV HADOOP_PKG hadoop-3.2.1
+ENV SCALA_PKG scala-2.11.12
 ENV SPARK_PKG spark-2.4.3-bin-without-hadoop
+ENV ZEPLN_PKG zeppelin-0.8.2-bin-netinst
+#ENV ZEPLN_PKG zeppelin-0.8.2-bin-all
+
 
 #Configuration des variables d'environnement
 ENV JAVA_HOME /usr/lib/jvm/java/jre
@@ -81,6 +84,11 @@ RUN tar -xzf ${SPARK_PKG}.tgz \
     && mv ${SPARK_PKG} spark \
     && rm ${SPARK_PKG}.tgz
 
+#Installation Zeppelin
+COPY --chown=hadoop package/${ZEPLN_PKG}.tgz /home/hadoop/
+RUN tar -xzf ${ZEPLN_PKG}.tgz \
+    && mv ${ZEPLN_PKG} zeppelin \
+    && rm ${ZEPLN_PKG}.tgz
 
 #Creation repertoire necessaire hadoop
 RUN mkdir -p /home/hadoop/hadoop/logs \
@@ -90,6 +98,8 @@ RUN mkdir -p /home/hadoop/hadoop/logs \
              /home/hadoop/data/tmp \
     && touch /home/hadoop/hadoop/logs/fairscheduler-statedump.log
 
+#Creation repertoire necessaire zeppelin
+RUN mkdir -p /home/hadoop/data/notebook
 
 #Gestion de l'environnement
 RUN echo "export PATH=/home/hadoop/hadoop/bin:/home/hadoop/hadoop/sbin:/home/hadoop/spark/bin:/home/hadoop/spark/sbin:\$PATH" >> /home/hadoop/.profile
@@ -111,7 +121,8 @@ RUN echo HDFS_NAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.
 RUN echo HDFS_DATANODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 RUN echo HDFS_SECONDARYNAMENODE_USER=hadoop >> /home/hadoop/hadoop/etc/hadoop/hadoop-env.sh
 
-
+#Install Zeppelin interperter (optional)
+#RUN /home/hadoop/zeppelin/bin/install-interpreter.sh --name md --proxy-url <url> --proxy-user <usr> --proxy-password <pwd>
 
 #Copie des fichiers de configuration hadoop
 COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml config/hadoop/mapred-site.xml config/hadoop/yarn-site.xml /home/hadoop/hadoop/etc/hadoop/
@@ -119,6 +130,8 @@ COPY --chown=hadoop config/hadoop/core-site.xml config/hadoop/hdfs-site.xml conf
 #Copie des fichiers de configuration pour Spark
 COPY --chown=hadoop config/hadoop/spark-defaults.conf /home/hadoop/spark/conf/
 
+#Copie des fichiers de configurations pour Zeppelin
+COPY --chown=hadoop config/zeppelin/zeppelin-site.xml config/zeppelin/interpreter.json /home/hadoop/zeppelin/conf/
 
 #Root
 USER root
@@ -126,8 +139,10 @@ USER root
 #Exposition de port
 #SSH
 EXPOSE 22
-#HTTP
-EXPOSE 80 8080
+#Http
+EXPOSE 80 8080 
+#Zeppelin
+EXPOSE 8081 8443
 #NameNode UI (& secondary namenode)
 EXPOSE 9870 9871 9868 9869
 #Resource Manager UI (yarn)

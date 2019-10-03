@@ -11,7 +11,7 @@ Here, you will find some scripts and config files to create a small cluster with
 ### Prerequisite
 
 Create the following folder :
-- data : used to store persisten data from the cluster (mapping volume)
+- data : used to store persisten data from the cluster (mapping volume) (and notebook for zeppelin)
 - package : used to store hadoop/spark/scala/.. archive to build the docker image
 - tmp : used to store the temporary files
 
@@ -25,10 +25,13 @@ Create the following folder :
 - To format hdfs namenode : `./manageCluster.sh format_hadoop`
 - To start hdfs & yarn services : `./manageCluster.sh start_hadoop`
 - To start spark & history server services : `./manageCluster.sh start_spark`
+- To start zeppelin server services : `./manageCluster.sh start_zeppelin`
+- To stop zeppelin server services : `./manageCluster.sh stop_zeppelin`
 - To stop spark & history server services : `./manageCluster.sh stop_spark`
 - To stop hdfs & yarn services : `./manageCluster.sh stop_hadoop`
 - To stop all the docker container : `./manageCluster.sh stop_container`
 - To start all the docker container : `./manageCluster.sh start_container`
+- To start hdfs, yarn, spark, history server and zeppelin server services : `./managerCluster.sh start_all`
 
 
 <h2 align="center">Docker Tips</h2>
@@ -60,6 +63,15 @@ Create the following folder :
  3. Restart docker service : `sudo systemctl restart docker`
 
 
+<h2 align="center">Deploy full cluster</h2>
+
+ 1. Go to the foder "clusterhadoop"
+ 2. Build the docker image : `./manageCluster.sh build`
+ 3. Deploy the docker image : `./manageCluster.sh deploy`
+ 4. Configure the ssh access in the cluster : `./manageCluster.sh config`
+ 5. Start all the needed service (hadoop, spark et zeppelin) : `./manageCluster.sh start_all`
+
+
 <h2 align="center">Cluster checking</h2>
 
 ### HDFS
@@ -83,6 +95,13 @@ Create the following folder :
  8. Execute a calcul with client mode : `spark-submit --deploy-mode client --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.3.jar 10`
  9. Execute a calcul with cluster mode : `spark-submit --deploy-mode cluster --class org.apache.spark.examples.SparkPi ${SPARK_HOME}/examples/jars/spark-examples_2.11-2.4.3.jar 10`
 
+### Zeppelin
+ 1. Open Firefox and go to the zeppelin url : `http://<nodemaster>:8081` (see with `./manageCluster.sh info`)
+ 2. Create a note and try to run the following command in the first cell : 
+```
+%spark
+sc
+```
 
 
 <h2 align="center">Info</h2>
