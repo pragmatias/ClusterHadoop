@@ -4,13 +4,7 @@ Here, you will find some scripts and config files to create a small cluster with
 
 <h2 align="center">Todo List</h2>
 
-- [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on MasterNode
-- [ ] find a way to manage error when starting hdfs/yarn/spark (script manageDockerCluster.sh) on SlaveNode
 - [ ] Use the configCluster.cfg file to configure the cluster with the script "manageCluster.sh"
-- [ ] Hadoop configuration files modification to use less memory
-- [ ] Add information about testing hdfs
-- [ ] Add information about testing yarn
-- [ ] Add information about testing spark
 
 <h2 align="center">Scripts</h2>
 
@@ -99,4 +93,22 @@ Create the following folder :
 
 
 
+<h2 align="center">Spark</h2>
 
+- [General Doc](https://spark.apache.org/docs/latest/)
+- [https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html](https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html)
+
+### test config : interpreter.json
+Master : spark://nodemaster:7077 
+Master : yarn-client
+
+
+### Exo
+
+- Load CSV files (and check options)
+- Load JSON files (and check options)
+- select from dataframe
+- filter on dataframe
+- group by on dataframe
+- agregates on dataframe
+- ...
